@@ -123,33 +123,27 @@ ORDER BY [Role] ;
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
         /// <param name="username">The user to add to the role.</param>
-        /// <param name="rolename">The DB role being modified.</param>
-        public static void AlterRoleAddMember(string connectionString, string username, string rolename)
+        /// <param name="role">The DB role being modified.</param>
+        public static void AlterRoleAddMember(string connectionString, string username, string role)
         {
             var paramUsername = new SqlParameter("@user_name", username);
-            var paramRolename = new SqlParameter("@role_name", rolename);
+            var paramRole = new SqlParameter("@role", role);
 
             const string sql = @"
-DECLARE @alter_role_add_member nvarchar(MAX) = 'ALTER ROLE [' + @role_name + '] ADD MEMEBER [' + @user_name + '] ;'
+DECLARE @alter_role_add_member nvarchar(MAX) = 'ALTER ROLE [' + @role + '] ADD MEMEBER [' + @user_name + '] ;'
 PRINT @alter_role_add_member ;
 
-IF NOT EXISTS
-(
-	SELECT *
-	FROM [sys].[database_role_members] AS DRM
-		RIGHT OUTER JOIN [sys].[database_principals] AS DP1
-			ON DRM.[role_principal_id] = DP1.[principal_id]
-		LEFT OUTER JOIN [sys].[database_principals] AS DP2
-			ON DRM.[member_principal_id] = DP2.[principal_id]
-	WHERE DP1.[type] = 'R'
-		AND DP1.[name] = @role_name 
-		AND DP2.[name] = @user_name
-)
+ IF IS_ROLEMEMBER (@role, @user_name) = 1  
+   print @user_name + ' is a member of the ' + @role + ' role'  
+ELSE IF IS_ROLEMEMBER (@role, @user_name) = 0  
 BEGIN
-	EXEC (@alter_role_add_member) ;
-END 
+   print  ' is NOT a member of the ' + @role + ' role'  
+   EXEC (@alter_role_add_member)
+END
+ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL  
+   print 'ERROR: Invalid database role / database_principal specified: ' + @role + ' / ' + @user_name ;  
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRolename);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRole);
         }
 
         /// <summary>
@@ -157,33 +151,27 @@ END
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
         /// <param name="username">The user to drop from the role.</param>
-        /// <param name="rolename">The DB role being modified.</param>
-        public static void AlterRoleDropMember(string connectionString, string username, string rolename)
+        /// <param name="role">The DB role being modified.</param>
+        public static void AlterRoleDropMember(string connectionString, string username, string role)
         {
             var paramUsername = new SqlParameter("@user_name", username);
-            var paramRolename = new SqlParameter("@role_name", rolename);
+            var paramRole = new SqlParameter("@role", role);
 
             const string sql = @"
-DECLARE @alter_role_drop_member nvarchar(MAX) = 'ALTER ROLE [' + @role_name + '] DROP MEMEBER [' + @user_name + '] ;'
+DECLARE @alter_role_drop_member nvarchar(MAX) = 'ALTER ROLE [' + @role + '] DROP MEMEBER [' + @user_name + '] ;'
 PRINT @alter_role_drop_member ;
 
-IF EXISTS
-(
-	SELECT *
-	FROM [sys].[database_role_members] AS DRM
-		RIGHT OUTER JOIN [sys].[database_principals] AS DP1
-			ON DRM.[role_principal_id] = DP1.[principal_id]
-		LEFT OUTER JOIN [sys].[database_principals] AS DP2
-			ON DRM.[member_principal_id] = DP2.[principal_id]
-	WHERE DP1.[type] = 'R'
-		AND DP1.[name] = @role_name 
-		AND DP2.[name] = @user_name
-)
-BEGIN
-	EXEC (@alter_role_drop_member) ;
-END 
+ IF IS_ROLEMEMBER (@role, @user_name) = 1  
+ BEGIN
+   print @user_name + ' is a member of the ' + @role + ' role'  
+   EXEC (@alter_role_drop_member)
+END
+ELSE IF IS_ROLEMEMBER (@role, @user_name) = 0  
+   print  ' is NOT a member of the ' + @role + ' role'  
+ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL  
+   print 'ERROR: Invalid database role / database_principal specified: ' + @role + ' / ' + @user_name ;  
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRolename);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRole);
         }
 
         /// <summary>
@@ -194,7 +182,7 @@ END
         /// <returns></returns>
         public static string GetServerRolesForLogin(string connectionString, string login)
         {
-            var paramLogin = new SqlParameter("@login_name", login);
+            var paramLogin = new SqlParameter("@login", login);
 
             const string sql = @"
 SELECT 
@@ -207,7 +195,7 @@ FROM sys.server_role_members AS SRM
 		ON SRM.Role_principal_id = SP.principal_id  
 	JOIN sys.server_principals AS SP2   
 		ON SRM.member_principal_id = SP2.principal_id  
-WHERE SP2.name = @login_name
+WHERE SP2.name = @login
 ORDER BY  SP.name, SP2.name ;
 ";
             var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, paramLogin);
@@ -230,28 +218,23 @@ ORDER BY  SP.name, SP2.name ;
         /// <param name="serverrole">The server role being modified.</param>
         public static void AlterServerRoleAddMember(string connectionString, string login, string serverrole)
         {
-            var paramLogin = new SqlParameter("@login_name", login);
+            var paramLogin = new SqlParameter("@login", login);
             var paramServerRole = new SqlParameter("server_role", serverrole);
 
             const string sql = @"
-DECLARE @alter_server_role_add_memmber nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] ADD MEMBER [' + @login_name + '] ;'
+DECLARE @alter_server_role_add_memmber nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] ADD MEMBER [' + @login + '] ;'
 PRINT @alter_server_role_add_memmber ;
 
-IF NOT EXISTS
-(
-	SELECT 
-		SP.[name] AS Role_Name
-	FROM [sys].[server_role_members] AS SRM  
-		JOIN [sys].[server_principals] AS SP  
-			ON [SRM].[Role_principal_id] = SP.[principal_id]
-		JOIN [sys].[server_principals] AS SP2   
-			ON SRM.[member_principal_id] = SP2.[principal_id] 
-	WHERE SP.[name] = @server_role
-		AND SP2.[name] = @login_name
-)
+
+IF IS_SRVROLEMEMBER (@server_role, @login) = 1  
+   print @login + '''s login is a member of the ' + @server_role + ' role'  
+ELSE IF IS_SRVROLEMEMBER (@server_role, @login) = 0  
 BEGIN
-	EXEC (@alter_server_role_add_memmber) ;
+   print @login + '''s login is NOT a member of the ' +  @server_role + ' role'  
+   EXEC (@alter_server_role_add_memmber)
 END
+ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
+   print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramLogin, paramServerRole);
         }
@@ -267,24 +250,19 @@ END
             var paramLogin = new SqlParameter("@login_name", login);
             var paramServerRole = new SqlParameter("server_role", serverrole);
 
-            const string sql = @"DECLARE @alter_server_role_drop_member nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] DROP MEMBER [' + @login_name + '] ;'
+            const string sql = @"
+DECLARE @alter_server_role_drop_member nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] DROP MEMBER [' + @login + '] ;'
 PRINT @alter_server_role_drop_member ;
 
-IF EXISTS
-(
-	SELECT 
-		SP.[name] AS Role_Name
-	FROM [sys].[server_role_members] AS SRM  
-		JOIN [sys].[server_principals] AS SP  
-			ON [SRM].[Role_principal_id] = SP.[principal_id]
-		JOIN [sys].[server_principals] AS SP2   
-			ON SRM.[member_principal_id] = SP2.[principal_id] 
-	WHERE SP.[name] = @server_role
-		AND SP2.[name] = @login_name
-)
+IF IS_SRVROLEMEMBER (@server_role, @login) = 1  
 BEGIN
-	EXEC (@alter_server_role_drop_member) ;
+   print @login + '''s login is a member of the ' + @server_role + ' role'  
+   EXEC (@alter_server_role_drop_member)
 END
+ELSE IF IS_SRVROLEMEMBER (@server_role, @login) = 0  
+   print @login + '''s login is NOT a member of the ' +  @server_role + ' role'  
+ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
+   print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
 
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramLogin, paramServerRole);

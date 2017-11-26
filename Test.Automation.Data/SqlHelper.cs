@@ -29,7 +29,7 @@ namespace Test.Automation.Data
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
             {
-                // There're three command types: StoredProcedure, Text, TableDirect. 
+                // There are three command types: StoredProcedure, Text, TableDirect. 
                 // The TableDirect type is only for OLE DB.  
                 cmd.CommandType = commandType;
                 if (parameters[0] != null)

@@ -12,6 +12,7 @@
 It handles opening and closing all the resources associated with connections and readers automatically.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>Test.Automation.Data</Company>
+    <PackageTags>ExecuteScalar ExecuteNonQuery ExecuteReader ExecuteDataTable SQL SqlHelper</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
