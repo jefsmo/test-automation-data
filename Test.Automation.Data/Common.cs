@@ -424,7 +424,7 @@ ORDER BY [Name] ;
 
         #endregion
 
-        #region UTILITY
+        #region PRIVATE METHODS
 
         private static IEnumerable<string> GetSchemaList(string connectionString, string sql)
         {
@@ -437,6 +437,10 @@ ORDER BY [Name] ;
             return table.Rows.Cast<DataRow>().Select(dr => dr[colIdx].ToString());
         }
 
+        #endregion
+
+        #region UTILITY
+        
         /// <summary>
         /// Verifies the actual data matches the expected data.
         /// </summary>
@@ -489,3 +493,4 @@ ORDER BY [Name] ;
         #endregion
     }
 }
+

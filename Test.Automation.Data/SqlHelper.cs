@@ -146,6 +146,8 @@ namespace Test.Automation.Data
             }
         }
 
+        #region PRIVATE METHODS
+
         private static void LogDataTableResult(SqlConnection conn, SqlCommand cmd, DataTable table)
         {
             var data = "- No result set returned. -";
@@ -226,5 +228,8 @@ namespace Test.Automation.Data
             // Setting it to False indicates that an error has occurred, and the Load method raises the exception that got you here.
             e.Continue = true;
         }
+
+        #endregion
     }
 }
+
