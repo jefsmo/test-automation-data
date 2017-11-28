@@ -8,8 +8,9 @@
     <RepositoryUrl>https://github.com/jefsmo/test-automation-data</RepositoryUrl>
     <PackageReleaseNotes>Initial Release (2017-02-04)</PackageReleaseNotes>
     <Summary>Contains SqlHelper, a library for executing SQL on a database.</Summary>
-    <Description>Contains SqlHelper, a library for executing SQL on a database.
-It handles opening and closing all the resources associated with connections and readers automatically.</Description>
+    <Description>
+      Contains SqlHelper, a library for executing SQL on a database.
+Automatically handles opening and closing all the resources associated with connections and readers.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>Test.Automation.Data</Company>
     <PackageTags>ExecuteScalar ExecuteNonQuery ExecuteReader ExecuteDataTable SQL SqlHelper</PackageTags>
@@ -19,13 +20,13 @@ It handles opening and closing all the resources associated with connections and
     <DocumentationFile>bin\Release\netstandard2.0\Test.Automation.Data.xml</DocumentationFile>
   </PropertyGroup>
 
+  <Target Name="CopyPackage" AfterTargets="Pack">
+    <Copy SourceFiles="$(OutputPath)..\$(PackageId).$(PackageVersion).nupkg" DestinationFolder="C:\Packages\" />
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Shouldly" Version="2.8.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
   </ItemGroup>
-
-  <Target Name="CopyPackage" AfterTargets="Pack">
-    <Copy SourceFiles="$(OutputPath)..\$(PackageId).$(PackageVersion).nupkg" DestinationFolder="C:\Packages\" />
-  </Target>
   
 </Project>

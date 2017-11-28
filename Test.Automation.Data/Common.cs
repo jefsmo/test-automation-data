@@ -20,7 +20,7 @@ namespace Test.Automation.Data
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
         /// <param name="username"></param>
-        /// <returns></returns>
+        /// <returns>Returns 1 if user exists, else 0.</returns>
         public static int GetUsernameCount(string connectionString, string username)
         {
             var paramUsername = new SqlParameter("@user_name", username);
@@ -37,7 +37,7 @@ WHERE [name] = @user_name ;
         /// Creates a user.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username"></param>
+        /// <param name="username">The user to create.</param>
         public static void CreateUser(string connectionString, string username)
         {
             var paramUsername = new SqlParameter("@user_name", username);
@@ -57,14 +57,13 @@ BEGIN
 END
 ";
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername);
-
         }
 
         /// <summary>
         /// Drops the user.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username"></param>
+        /// <param name="username">The user to drop.</param>
         public static void DropUser(string connectionString, string username)
         {
             var paramUsername = new SqlParameter("@user_name", username);
@@ -91,7 +90,7 @@ END
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
         /// <param name="username">The user to get the roles for.</param>
-        /// <returns></returns>
+        /// <returns>Returns comma separated list of roles.</returns>
         public static string GetRolesForUsername(string connectionString, string username)
         {
             var paramUsername = new SqlParameter("@user_name", username);
@@ -113,7 +112,11 @@ ORDER BY [Role] ;
             }
             if(table.Rows.Count > 0)
             {
-                return table.Rows.Cast<string>().Aggregate((x, next) => x + ", " + next);
+                var colIdx = table.Columns["Role"].Ordinal;
+                return table.Rows
+                    .Cast<DataRow>()
+                    .Select(dr => dr[colIdx].ToString())
+                    .Aggregate((x, next) => x + ", " + next);
             }
             return null;
         }
@@ -178,25 +181,22 @@ ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL
         /// Returns a comma separated string of the fixed server roles belonging to the login.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="login"></param>
-        /// <returns></returns>
+        /// <param name="login">The login to get the roles for.</param>
+        /// <returns>Returns comma separated list of fixed server roles.</returns>
         public static string GetServerRolesForLogin(string connectionString, string login)
         {
             var paramLogin = new SqlParameter("@login", login);
 
             const string sql = @"
 SELECT 
-	--SRM.role_principal_id
-	SP.name AS Role_Name
-	--, SRM.member_principal_id
-	--, SP2.name  AS Member_Name  
-FROM sys.server_role_members AS SRM  
-	JOIN sys.server_principals AS SP  
-		ON SRM.Role_principal_id = SP.principal_id  
-	JOIN sys.server_principals AS SP2   
-		ON SRM.member_principal_id = SP2.principal_id  
+	SP.name AS [Server_Role]
+FROM [sys].[server_role_members] AS SRM  
+	JOIN [sys].[server_principals] AS SP  
+		ON SRM.[Role_principal_id] = SP.[principal_id]
+	JOIN [sys].[server_principals] AS SP2   
+		ON SRM.[member_principal_id] = SP2.[principal_id]  
 WHERE SP2.name = @login
-ORDER BY  SP.name, SP2.name ;
+ORDER BY  SP.[name], SP2.[name] ;
 ";
             var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, paramLogin);
             if(Debugger.IsAttached)
@@ -205,7 +205,11 @@ ORDER BY  SP.name, SP2.name ;
             }
             if(table.Rows.Count > 0)
             {
-                return table.Rows.Cast<string>().Aggregate((x, next) => x + ", " + next);
+                var colIdx = table.Columns["Server_Role"].Ordinal;
+                return table.Rows
+                    .Cast<DataRow>()
+                    .Select(dr => dr[colIdx].ToString())
+                    .Aggregate((x, next) => x + ", " + next);
             }
             return null;
         }
@@ -224,7 +228,6 @@ ORDER BY  SP.name, SP2.name ;
             const string sql = @"
 DECLARE @alter_server_role_add_memmber nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] ADD MEMBER [' + @login + '] ;'
 PRINT @alter_server_role_add_memmber ;
-
 
 IF IS_SRVROLEMEMBER (@server_role, @login) = 1  
    print @login + '''s login is a member of the ' + @server_role + ' role'  
@@ -264,7 +267,6 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) = 0
 ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
    print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
-
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramLogin, paramServerRole);
         }
 
@@ -277,7 +279,7 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL
         /// </summary>
         /// <param name="connectionString">The database connection string.</param>
         /// <param name="dbname">The database name.</param>
-        /// <returns></returns>
+        /// <returns>Returns 1 if DB exists, else 0.</returns>
         public static int GetDatabaseNameCount(string connectionString, string dbname)
         {
             var paramDbName = new SqlParameter("@db_name", dbname);
@@ -294,7 +296,7 @@ WHERE [name] = @db_name ;
         /// Gets a list of DB tables.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns>Returns a list of table names.</returns>
+        /// <returns>Returns a list of tables.</returns>
         public static IEnumerable<string> GetTables(string connectionString)
         {
             const string sql = @"
@@ -305,19 +307,14 @@ FROM [sys].[tables] t
 		ON s.schema_id = t.schema_id
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         /// <summary>
         /// Gets a list of DB views.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns></returns>
+        /// <returns>Returns a list of views.</returns>
         public static IEnumerable<string> GetViews(string connectionString)
         {
             const string sql = @"
@@ -328,19 +325,14 @@ FROM [sys].[views] v
 		ON s.schema_id = v.schema_id
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         /// <summary>
         /// Gets a list of DB stored procedures.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns></returns>
+        /// <returns>Returns a list of stored procedures.</returns>
         public static IEnumerable<string> GetStoredProcedures(string connectionString)
         {
             const string sql = @"
@@ -351,19 +343,14 @@ FROM [sys].[procedures] p
 		ON s.schema_id = p.[schema_id]
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         /// <summary>
         /// Gets a list of DB Scalar Functions.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns></returns>
+        /// <returns>Returns a list of scalar functions.</returns>
         public static IEnumerable<string> GetScalarFunctions(string connectionString)
         {
             const string sql = @"
@@ -375,19 +362,14 @@ FROM [sys].[objects] o
 WHERE [type] = 'FN'
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         /// <summary>
         /// Gets a list of DB Table Functions.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns></returns>
+        /// <returns>Returns a list of table functions.</returns>
         public static IEnumerable<string> GetTableFunctions(string connectionString)
         {
             const string sql = @"
@@ -399,19 +381,14 @@ FROM [sys].[objects] o
 WHERE [type] = 'IF'
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         /// <summary>
         /// Gets a list of DB User-Defined Data Types.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns></returns>
+        /// <returns>Returns a list of user-defined data types.</returns>
         public static IEnumerable<string> GetUserDefinedDataTypes(string connectionString)
         {
             const string sql = @"
@@ -423,19 +400,14 @@ FROM [sys].[types] t
 WHERE t.is_user_defined = 1 AND is_table_type = 0
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         /// <summary>
         /// Gets a list of User-Defined Table Types.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <returns></returns>
+        /// <returns>Returns a list of user-defined table types.</returns>
         public static IEnumerable<string> GetUserDefinedTableTypes(string connectionString)
         {
             const string sql = @"
@@ -447,17 +419,23 @@ FROM [sys].[types] tt
 WHERE t.is_user_defined = 1 AND is_table_type = 1
 ORDER BY [Name] ; 
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            return table.Rows.Cast<string>().ToList();
+            return GetSchemaList(connectionString, sql);
         }
 
         #endregion
 
         #region UTILITY
+
+        private static IEnumerable<string> GetSchemaList(string connectionString, string sql)
+        {
+            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
+            if (Debugger.IsAttached)
+            {
+                PrintTable(table, true);
+            }
+            var colIdx = table.Columns["Name"].Ordinal;
+            return table.Rows.Cast<DataRow>().Select(dr => dr[colIdx].ToString());
+        }
 
         /// <summary>
         /// Verifies the actual data matches the expected data.
@@ -491,7 +469,6 @@ ORDER BY [Name] ;
             {
                 Console.WriteLine($"{col.ColumnName, -25}");
             }
-            Console.WriteLine();
 
             foreach(DataRow row in table.Rows)
             {
@@ -506,7 +483,6 @@ ORDER BY [Name] ;
                         Console.WriteLine($"{row[col],-25}");
                     }
                 }
-                Console.WriteLine();
             }
             Console.WriteLine();
         }
