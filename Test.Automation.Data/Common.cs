@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
-using Shouldly;
+using NUnit.Framework;
 
 namespace Test.Automation.Data
 {
@@ -434,13 +434,13 @@ ORDER BY [Name] ;
                 PrintTable(table, true);
             }
             var colIdx = table.Columns["Name"].Ordinal;
-            return table.Rows.Cast<DataRow>().Select(dr => dr[colIdx].ToString());
+            return table.Rows.Cast<DataRow>().Select(dr => (string)dr[colIdx]);
         }
 
         #endregion
 
         #region UTILITY
-        
+
         /// <summary>
         /// Verifies the actual data matches the expected data.
         /// </summary>
@@ -448,15 +448,14 @@ ORDER BY [Name] ;
         /// <param name="actual">The actual values.</param>
         public static void Verify(IEnumerable<string> expected, IEnumerable<string> actual)
         {
-            actual.ShouldSatisfyAllConditions
-                (
-                    () => actual.Count().ShouldBe(expected.Count()),
-                    () => actual.Except(expected).ShouldBe(Enumerable.Empty<string>(),
+            Assert.Multiple(() =>
+            {
+                Assert.That(actual.Count(), Is.EqualTo(expected.Count()));
+                Assert.That(actual.Except(expected), Is.Empty,
                     "Item is missing from expected test data. " +
-                    "Run test in debug mode to generate expected data in output window."),
-                    () => expected.Except(actual).ShouldBe(Enumerable.Empty<string>(),
-                    "Item is missing from DB.")
-                );
+                    "Run test in debug mode to generate expected data in output window.");
+                Assert.That(expected.Except(actual), Is.Empty, "Item is missing from DB.");
+            });
         }
 
         /// <summary>

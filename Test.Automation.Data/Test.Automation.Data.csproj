@@ -14,6 +14,7 @@ Automatically handles opening and closing all the resources associated with conn
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>Test.Automation.Data</Company>
     <PackageTags>ExecuteScalar ExecuteNonQuery ExecuteReader ExecuteDataTable SQL SqlHelper</PackageTags>
+    <Version>1.0.7</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -25,7 +26,7 @@ Automatically handles opening and closing all the resources associated with conn
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="Shouldly" Version="2.8.3" />
+    <PackageReference Include="NUnit" Version="3.9.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
   </ItemGroup>
   
