@@ -19,13 +19,15 @@ namespace Test.Automation.Data
         /// Returns 1 if the user exists, else 0.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username"></param>
+        /// <param name="user_name"></param>
         /// <returns>Returns 1 if user exists, else 0.</returns>
-        public static int GetUsernameCount(string connectionString, string username)
+        public static int GetUsernameCount(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", username);
+            var paramUsername = new SqlParameter("@user_name", user_name);
 
             const string sql = @"
+-- DECLARE @user_name sysname = 'DOMAIN\USER'
+
 SELECT COUNT(*)
 FROM [sys].[database_principals]
 WHERE [name] = @user_name ;
@@ -37,12 +39,14 @@ WHERE [name] = @user_name ;
         /// Creates a user.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username">The user to create.</param>
-        public static void CreateUser(string connectionString, string username)
+        /// <param name="user_name">The user to create.</param>
+        public static void CreateUser(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", username);
+            var paramUsername = new SqlParameter("@user_name", user_name);
 
             const string sql = @"
+-- DECLARE @user_name sysname = 'DOMAIN\USER'
+
 DECLARE @createUser nvarchar(MAX) = 'CREATE USER [' + @user_name + '] FOR LOGIN [' + @user_name + '] WITH DEFAULT_SCHEMA = [dbo] ; '
 PRINT @createUser ;
 
@@ -63,12 +67,14 @@ END
         /// Drops the user.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username">The user to drop.</param>
-        public static void DropUser(string connectionString, string username)
+        /// <param name="user_name">The user to drop.</param>
+        public static void DropUser(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", username);
+            var paramUsername = new SqlParameter("@user_name", user_name);
 
             const string sql = @"
+-- DECLARE @user_name sysname = 'DOMAIN\USER'
+
 DECLARE @dropUser nvarchar(MAX) = 'DROP USER [' + @user_name + '] ; '
 PRINT @dropUser ;
 
@@ -89,13 +95,15 @@ END
         /// Returns a comma separated string of the DB roles belonging to the user.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username">The user to get the roles for.</param>
+        /// <param name="user_name">The user to get the roles for.</param>
         /// <returns>Returns comma separated list of roles.</returns>
-        public static string GetRolesForUsername(string connectionString, string username)
+        public static string GetRolesForUsername(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", username);
+            var paramUsername = new SqlParameter("@user_name", user_name);
 
             const string sql = @"
+-- DECLARE @user_name sysname = 'DOMAIN\USER'
+
 SELECT r.[name] as [Role]
 FROM [sys].[database_role_members] AS m
 	INNER JOIN [sys].[database_principals] AS r	
@@ -125,26 +133,38 @@ ORDER BY [Role] ;
         /// Adds the user to a DB role.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username">The user to add to the role.</param>
+        /// <param name="user_name">The user to add to the role.</param>
         /// <param name="role">The DB role being modified.</param>
-        public static void AlterRoleAddMember(string connectionString, string username, string role)
+        public static void AlterRoleAddMember(string connectionString, string user_name, string role)
         {
-            var paramUsername = new SqlParameter("@user_name", username);
+            var paramUsername = new SqlParameter("@user_name", user_name);
             var paramRole = new SqlParameter("@role", role);
 
             const string sql = @"
+--DECLARE @user_name sysname = 'DOMAIN\USER'
+--DECLARE @role sysname = 'db_datareader'
+
 DECLARE @alter_role_add_member nvarchar(MAX) = 'ALTER ROLE [' + @role + '] ADD MEMEBER [' + @user_name + '] ;'
 PRINT @alter_role_add_member ;
 
- IF IS_ROLEMEMBER (@role, @user_name) = 1  
-   print @user_name + ' is a member of the ' + @role + ' role'  
-ELSE IF IS_ROLEMEMBER (@role, @user_name) = 0  
+IF NOT EXISTS
+(
+    SELECT
+        dRole.name AS [Database Role Name]
+        ,dPrinc.name AS [Members]
+    FROM sys.database_role_members AS dRo
+        JOIN sys.database_principals AS dPrinc
+            ON dRo.member_principal_id = dPrinc.principal_id
+        JOIN sys.database_principals AS dRole
+            ON dRo.role_principal_id = dRole.principal_Id
+    WHERE dPrinc.name = @user_name
+        AND dRole.name = @role
+)
 BEGIN
-   print  ' is NOT a member of the ' + @role + ' role'  
-   EXEC (@alter_role_add_member)
+    PRINT 'DB Role [' + @role + '] does not exist for user [' + @user_name + ']'
+    EXEC (@alter_role_add_member)
+    PRINT 'Member added to role'
 END
-ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL  
-   print 'ERROR: Invalid database role / database_principal specified: ' + @role + ' / ' + @user_name ;  
 ";
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRole);
         }
@@ -153,26 +173,38 @@ ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL
         /// Drops the user from a DB role.
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
-        /// <param name="username">The user to drop from the role.</param>
+        /// <param name="user_name">The user to drop from the role.</param>
         /// <param name="role">The DB role being modified.</param>
-        public static void AlterRoleDropMember(string connectionString, string username, string role)
+        public static void AlterRoleDropMember(string connectionString, string user_name, string role)
         {
-            var paramUsername = new SqlParameter("@user_name", username);
+            var paramUsername = new SqlParameter("@user_name", user_name);
             var paramRole = new SqlParameter("@role", role);
 
             const string sql = @"
-DECLARE @alter_role_drop_member nvarchar(MAX) = 'ALTER ROLE [' + @role + '] DROP MEMEBER [' + @user_name + '] ;'
+--DECLARE @user_name sysname = 'DOMAIN\USER'
+--DECLARE @role sysname = 'db_datareader'
+
+DECLARE @alter_role_drop_member nvarchar(MAX) = 'ALTER ROLE [' + @role + '] ADD MEMEBER [' + @user_name + '] ;'
 PRINT @alter_role_drop_member ;
 
- IF IS_ROLEMEMBER (@role, @user_name) = 1  
- BEGIN
-   print @user_name + ' is a member of the ' + @role + ' role'  
-   EXEC (@alter_role_drop_member)
+IF EXISTS
+(
+    SELECT
+        dRole.name AS [Database Role Name]
+        ,dPrinc.name AS [Members]
+    FROM sys.database_role_members AS dRo
+        JOIN sys.database_principals AS dPrinc
+            ON dRo.member_principal_id = dPrinc.principal_id
+        JOIN sys.database_principals AS dRole
+            ON dRo.role_principal_id = dRole.principal_Id
+    WHERE dPrinc.name = @user_name
+        AND dRole.name = @role
+)
+BEGIN
+    PRINT 'DB Role [' + @role + '] exists for user [' + @user_name + ']'
+    EXEC (@alter_role_drop_member)
+    PRINT 'Member dropped from role'
 END
-ELSE IF IS_ROLEMEMBER (@role, @user_name) = 0  
-   print  ' is NOT a member of the ' + @role + ' role'  
-ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL  
-   print 'ERROR: Invalid database role / database_principal specified: ' + @role + ' / ' + @user_name ;  
 ";
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRole);
         }
@@ -188,6 +220,8 @@ ELSE IF IS_ROLEMEMBER (@role, @user_name) IS NULL
             var paramLogin = new SqlParameter("@login", login);
 
             const string sql = @"
+-- DECLARE @login sysname = 'DOMAIN\USER'
+
 SELECT 
 	SP.name AS [Server_Role]
 FROM [sys].[server_role_members] AS SRM  
@@ -219,22 +253,25 @@ ORDER BY  SP.[name], SP2.[name] ;
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
         /// <param name="login">The login to add to the server role.</param>
-        /// <param name="serverrole">The server role being modified.</param>
-        public static void AlterServerRoleAddMember(string connectionString, string login, string serverrole)
+        /// <param name="server_role">The server role being modified.</param>
+        public static void AlterServerRoleAddMember(string connectionString, string login, string server_role)
         {
             var paramLogin = new SqlParameter("@login", login);
-            var paramServerRole = new SqlParameter("server_role", serverrole);
+            var paramServerRole = new SqlParameter("server_role", server_role);
 
             const string sql = @"
+-- DECLARE @login sysname = 'DOMAIN\USER'
+-- DECLARE @server_role sysname = 'sysadmin'
+
 DECLARE @alter_server_role_add_memmber nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] ADD MEMBER [' + @login + '] ;'
 PRINT @alter_server_role_add_memmber ;
 
 IF IS_SRVROLEMEMBER (@server_role, @login) = 1  
-   print @login + '''s login is a member of the ' + @server_role + ' role'  
+   print @login + '''s login is a member of the ' + @server_role + ' role' ;
 ELSE IF IS_SRVROLEMEMBER (@server_role, @login) = 0  
 BEGIN
-   print @login + '''s login is NOT a member of the ' +  @server_role + ' role'  
-   EXEC (@alter_server_role_add_memmber)
+   print @login + '''s login is NOT a member of the ' +  @server_role + ' role' ;
+   EXEC (@alter_server_role_add_memmber) ;
 END
 ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
    print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
@@ -247,23 +284,26 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL
         /// </summary>
         /// <param name="connectionString">The DB connection string.</param>
         /// <param name="login">The login to drop from the server role.</param>
-        /// <param name="serverrole">The server role being modified</param>
-        public static void AlterServerRoleDropMember(string connectionString, string login, string serverrole)
+        /// <param name="server_role">The server role being modified</param>
+        public static void AlterServerRoleDropMember(string connectionString, string login, string server_role)
         {
-            var paramLogin = new SqlParameter("@login_name", login);
-            var paramServerRole = new SqlParameter("server_role", serverrole);
+            var paramLogin = new SqlParameter("@login", login);
+            var paramServerRole = new SqlParameter("server_role", server_role);
 
             const string sql = @"
+-- DECLARE @login sysname = 'DOMAIN\USER'
+-- DECLARE @server_role sysname = 'sysadmin'
+
 DECLARE @alter_server_role_drop_member nvarchar(MAX) = 'ALTER SERVER ROLE [' + @server_role + '] DROP MEMBER [' + @login + '] ;'
 PRINT @alter_server_role_drop_member ;
 
 IF IS_SRVROLEMEMBER (@server_role, @login) = 1  
 BEGIN
-   print @login + '''s login is a member of the ' + @server_role + ' role'  
-   EXEC (@alter_server_role_drop_member)
+   print @login + '''s login is a member of the ' + @server_role + ' role' ;
+   EXEC (@alter_server_role_drop_member) ;
 END
 ELSE IF IS_SRVROLEMEMBER (@server_role, @login) = 0  
-   print @login + '''s login is NOT a member of the ' +  @server_role + ' role'  
+   print @login + '''s login is NOT a member of the ' +  @server_role + ' role' ;
 ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
    print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
@@ -278,18 +318,20 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL
         /// Returns 1 if the database exists, else 0.
         /// </summary>
         /// <param name="connectionString">The database connection string.</param>
-        /// <param name="dbname">The database name.</param>
+        /// <param name="db_name">The database name.</param>
         /// <returns>Returns 1 if DB exists, else 0.</returns>
-        public static int GetDatabaseNameCount(string connectionString, string dbname)
+        public static int GetDatabaseNameCount(string connectionString, string db_name)
         {
-            var paramDbName = new SqlParameter("@db_name", dbname);
+            var paramName = new SqlParameter("@db_name", db_name);
 
             const string sql = @"
+-- DECLARE @db_name sysname = 'master'
+
 SELECT COUNT(*)
 FROM [sys].[databases]
 WHERE [name] = @db_name ; 
 ";
-            return (int)SqlHelper.ExecuteScalar(connectionString, sql, CommandType.Text, paramDbName);
+            return (int)SqlHelper.ExecuteScalar(connectionString, sql, CommandType.Text, paramName);
         }
 
         /// <summary>
