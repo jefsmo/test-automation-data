@@ -29,6 +29,8 @@ namespace Test.Automation.Data
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
             {
+                conn.InfoMessage += Conn_InfoMessage;
+
                 // There are three command types: StoredProcedure, Text, TableDirect. 
                 // The TableDirect type is only for OLE DB.  
                 cmd.CommandType = commandType;
@@ -64,6 +66,8 @@ namespace Test.Automation.Data
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
             {
+                conn.InfoMessage += Conn_InfoMessage;
+
                 cmd.CommandType = commandType;
                 if (parameters[0] != null)
                 {
@@ -125,6 +129,8 @@ namespace Test.Automation.Data
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
             {
+                conn.InfoMessage += Conn_InfoMessage;
+
                 cmd.CommandType = commandType;
                 if (parameters[0] != null)
                 {
@@ -150,7 +156,7 @@ namespace Test.Automation.Data
 
         private static void LogDataTableResult(SqlConnection conn, SqlCommand cmd, DataTable table)
         {
-            var data = "- No result set returned. -";
+            var data = "- The result set is empty. -";
             var rowCount = 0;
 
             if (table != null)
@@ -180,7 +186,7 @@ namespace Test.Automation.Data
             {
                 {"ConnectionString", conn.ConnectionString },
                 {"SQL Query", cmd.CommandText},
-                {"Result", result}
+                {"SQL Result", result}
             };
 
             if (rowCount > 0)
@@ -197,7 +203,7 @@ namespace Test.Automation.Data
 
             foreach (var kvp in logInfo)
             {
-                Console.WriteLine("{0,-25}\t{1,-25}", kvp.Key, kvp.Value);
+                Console.WriteLine($"{kvp.Key,-25}\t{kvp.Value,-25}");
             }
         }
 
@@ -227,6 +233,22 @@ namespace Test.Automation.Data
             // Setting e.Continue to True tells the Load method to continue trying. 
             // Setting it to False indicates that an error has occurred, and the Load method raises the exception that got you here.
             e.Continue = true;
+        }
+
+        /// <summary>
+        /// Event handler for InfoMessage sql connection events.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private static void Conn_InfoMessage(object sender, SqlInfoMessageEventArgs e)
+        {
+            if (Debugger.IsAttached)
+            {
+                foreach (SqlError err in e.Errors)
+                {
+                    Console.WriteLine($"{"INFO MESSAGE: ", -25}\tLine: {err.LineNumber}\t{err.Message}");
+                }
+            }
         }
 
         #endregion

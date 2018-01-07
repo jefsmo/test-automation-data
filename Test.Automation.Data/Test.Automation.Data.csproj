@@ -8,8 +8,7 @@
     <RepositoryUrl>https://github.com/jefsmo/test-automation-data</RepositoryUrl>
     <PackageReleaseNotes>Initial Release (2017-02-04)</PackageReleaseNotes>
     <Summary>Contains SqlHelper, a library for executing SQL on a database.</Summary>
-    <Description>
-      Contains SqlHelper, a library for executing SQL on a database.
+    <Description>Contains SqlHelper, a library for executing SQL on a database.
 Automatically handles opening and closing all the resources associated with connections and readers.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>Test.Automation.Data</Company>
@@ -27,7 +26,7 @@ Automatically handles opening and closing all the resources associated with conn
 
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.9.0" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
   </ItemGroup>
   
 </Project>

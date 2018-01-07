@@ -13,7 +13,7 @@ namespace Test.Automation.Data
     /// </summary>
     public static class Common
     {
-        #region USER ROLES AND PERMISSIONS
+        #region USER ROLES AND PERMISSIONS CHECKS
 
         /// <summary>
         /// Returns 1 if the user exists, else 0.
@@ -23,7 +23,7 @@ namespace Test.Automation.Data
         /// <returns>Returns 1 if user exists, else 0.</returns>
         public static int GetUsernameCount(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", user_name);
+            var paramUsername = new SqlParameter("@user_name", user_name.Trim());
 
             const string sql = @"
 -- DECLARE @user_name sysname = 'DOMAIN\USER'
@@ -42,7 +42,9 @@ WHERE [name] = @user_name ;
         /// <param name="user_name">The user to create.</param>
         public static void CreateUser(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", user_name);
+            SqlServerVersionCheck(connectionString);
+
+            var paramUsername = new SqlParameter("@user_name", user_name.Trim());
 
             const string sql = @"
 -- DECLARE @user_name sysname = 'DOMAIN\USER'
@@ -70,7 +72,9 @@ END
         /// <param name="user_name">The user to drop.</param>
         public static void DropUser(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", user_name);
+            SqlServerVersionCheck(connectionString);
+
+            var paramUsername = new SqlParameter("@user_name", user_name.Trim());
 
             const string sql = @"
 -- DECLARE @user_name sysname = 'DOMAIN\USER'
@@ -99,7 +103,7 @@ END
         /// <returns>Returns comma separated list of roles.</returns>
         public static string GetRolesForUsername(string connectionString, string user_name)
         {
-            var paramUsername = new SqlParameter("@user_name", user_name);
+            var paramUsername = new SqlParameter("@user_name", user_name.Trim());
 
             const string sql = @"
 -- DECLARE @user_name sysname = 'DOMAIN\USER'
@@ -137,8 +141,10 @@ ORDER BY [Role] ;
         /// <param name="role">The DB role being modified.</param>
         public static void AlterRoleAddMember(string connectionString, string user_name, string role)
         {
-            var paramUsername = new SqlParameter("@user_name", user_name);
-            var paramRole = new SqlParameter("@role", role);
+            SqlServerVersionCheck(connectionString);
+
+            var paramUsername = new SqlParameter("@user_name", user_name.Trim());
+            var paramRole = new SqlParameter("@role", role.Trim());
 
             const string sql = @"
 --DECLARE @user_name sysname = 'DOMAIN\USER'
@@ -177,8 +183,10 @@ END
         /// <param name="role">The DB role being modified.</param>
         public static void AlterRoleDropMember(string connectionString, string user_name, string role)
         {
-            var paramUsername = new SqlParameter("@user_name", user_name);
-            var paramRole = new SqlParameter("@role", role);
+            SqlServerVersionCheck(connectionString);
+
+            var paramUsername = new SqlParameter("@user_name", user_name.Trim());
+            var paramRole = new SqlParameter("@role", role.Trim());
 
             const string sql = @"
 --DECLARE @user_name sysname = 'DOMAIN\USER'
@@ -217,7 +225,7 @@ END
         /// <returns>Returns comma separated list of fixed server roles.</returns>
         public static string GetServerRolesForLogin(string connectionString, string login)
         {
-            var paramLogin = new SqlParameter("@login", login);
+            var paramLogin = new SqlParameter("@login", login.Trim());
 
             const string sql = @"
 -- DECLARE @login sysname = 'DOMAIN\USER'
@@ -256,8 +264,10 @@ ORDER BY  SP.[name], SP2.[name] ;
         /// <param name="server_role">The server role being modified.</param>
         public static void AlterServerRoleAddMember(string connectionString, string login, string server_role)
         {
-            var paramLogin = new SqlParameter("@login", login);
-            var paramServerRole = new SqlParameter("server_role", server_role);
+            SqlServerVersionCheck(connectionString);
+
+            var paramLogin = new SqlParameter("@login", login.Trim());
+            var paramServerRole = new SqlParameter("server_role", server_role.Trim());
 
             const string sql = @"
 -- DECLARE @login sysname = 'DOMAIN\USER'
@@ -273,7 +283,7 @@ BEGIN
    print @login + '''s login is NOT a member of the ' +  @server_role + ' role' ;
    EXEC (@alter_server_role_add_memmber) ;
 END
-ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
+ELSE IF IS_SRVROLEMEMBER (@server_role)), @login) IS NULL  
    print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
             SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramLogin, paramServerRole);
@@ -287,8 +297,10 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL
         /// <param name="server_role">The server role being modified</param>
         public static void AlterServerRoleDropMember(string connectionString, string login, string server_role)
         {
-            var paramLogin = new SqlParameter("@login", login);
-            var paramServerRole = new SqlParameter("server_role", server_role);
+            SqlServerVersionCheck(connectionString);
+
+            var paramLogin = new SqlParameter("@login", login.Trim());
+            var paramServerRole = new SqlParameter("server_role", server_role.Trim());
 
             const string sql = @"
 -- DECLARE @login sysname = 'DOMAIN\USER'
@@ -312,7 +324,7 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL
 
         #endregion
 
-        #region DB SCHEMA
+        #region DB SCHEMA CHECKS
 
         /// <summary>
         /// Returns 1 if the database exists, else 0.
@@ -322,14 +334,14 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL
         /// <returns>Returns 1 if DB exists, else 0.</returns>
         public static int GetDatabaseNameCount(string connectionString, string db_name)
         {
-            var paramName = new SqlParameter("@db_name", db_name);
+            var paramName = new SqlParameter("@db_name", db_name.Trim());
 
             const string sql = @"
 -- DECLARE @db_name sysname = 'master'
 
 SELECT COUNT(*)
 FROM [sys].[databases]
-WHERE [name] = @db_name ; 
+WHERE [name] = @db_name) ; 
 ";
             return (int)SqlHelper.ExecuteScalar(connectionString, sql, CommandType.Text, paramName);
         }
@@ -466,22 +478,7 @@ ORDER BY [Name] ;
 
         #endregion
 
-        #region PRIVATE METHODS
-
-        private static IEnumerable<string> GetSchemaList(string connectionString, string sql)
-        {
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
-            if (Debugger.IsAttached)
-            {
-                PrintTable(table, true);
-            }
-            var colIdx = table.Columns["Name"].Ordinal;
-            return table.Rows.Cast<DataRow>().Select(dr => (string)dr[colIdx]);
-        }
-
-        #endregion
-
-        #region UTILITY
+        #region UTILITY METHODS
 
         /// <summary>
         /// Verifies the actual data matches the expected data.
@@ -531,6 +528,35 @@ ORDER BY [Name] ;
             }
             Console.WriteLine();
         }
+
+        #endregion
+
+        #region PRIVATE METHODS
+
+        private static IEnumerable<string> GetSchemaList(string connectionString, string sql)
+        {
+            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
+            if (Debugger.IsAttached)
+            {
+                PrintTable(table, true);
+            }
+            var colIdx = table.Columns["Name"].Ordinal;
+            return table.Rows.Cast<DataRow>().Select(dr => (string)dr[colIdx]);
+        }
+
+        private static void SqlServerVersionCheck(string serverCnn)
+        {
+            var productVersion = SqlHelper.ExecuteScalar(serverCnn, "SELECT SERVERPROPERTY('ProductVersion') AS ProductVersion", CommandType.Text, default(SqlParameter)) as string;
+            // major.minor.build.revision
+            var major = Convert.ToInt32(productVersion.Split('.')[0]);
+
+            if (major < 10)
+            {
+                throw new ApplicationException($"This method contains syntax that is not supported by SQL Server version '{productVersion}'.\r\n" +
+                    $"Create a custom query using supported syntax instead.");
+            }
+        }
+
         #endregion
     }
 }
