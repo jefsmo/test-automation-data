@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+
+  <appSettings>
+    <!--
+    testRunSetting = Choose a test environment. [ LOCAL | TEST | < ... > ]
+    ===========================================================================
+    -->
+    <add key="testRunSetting" value="TEST" />
+  </appSettings>
+
+  <connectionStrings>
+    <clear />
+    <add name="LOCAL" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
+    <add name="TEST" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
+  </connectionStrings>
+
+</configuration>
