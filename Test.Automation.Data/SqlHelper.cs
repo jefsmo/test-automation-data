@@ -16,15 +16,18 @@ namespace Test.Automation.Data
     /// </remarks>
     public static class SqlHelper
     {
+        #region EXECUTE NON-QUERY
+
         /// <summary>
         /// Executes a Transact-SQL statement against the connection and returns the number of rows affected.
         /// </summary>
-        /// <param name="connectionString">The connection string to the SQLServer/database.</param>
-        /// <param name="commandText">The SQL command to be executed.</param>
-        /// <param name="commandType">Either stored procedure or text.</param>
-        /// <param name="parameters">A collection of SQLParameters to be passed to the SQL command.</param>
-        /// <returns>The number of rows affected.</returns>
-        public static int ExecuteNonQuery(string connectionString, string commandText, CommandType commandType, params SqlParameter[] parameters)
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="commandType"></param>
+        /// <param name="commandTimeout"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public static int ExecuteNonQuery(string connectionString, string commandText, CommandType commandType, int commandTimeout, params SqlParameter[] parameters)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
@@ -34,6 +37,8 @@ namespace Test.Automation.Data
                 // There are three command types: StoredProcedure, Text, TableDirect. 
                 // The TableDirect type is only for OLE DB.  
                 cmd.CommandType = commandType;
+                cmd.CommandTimeout = commandTimeout;
+
                 if (parameters[0] != null)
                 {
                     cmd.Parameters.AddRange(parameters);
@@ -53,15 +58,47 @@ namespace Test.Automation.Data
         }
 
         /// <summary>
+        /// Use when query does not use SQL parameters. Uses default(SqlParameter).
+        /// Executes a Transact-SQL statement against the connection and returns the number of rows affected.
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="commandType"></param>
+        /// <param name="commandTimeout"></param>
+        /// <returns></returns>
+        public static int ExecuteNonQuery(string connectionString, string commandText, CommandType commandType = CommandType.Text, int commandTimeout = 30)
+        {
+            return ExecuteNonQuery(connectionString, commandText, commandType, commandTimeout, default(SqlParameter));
+        }
+
+        /// <summary>
+        /// Executes a Transact-SQL statement against the connection and returns the number of rows affected.
+        /// Uses CommandType.Text and CommandTimeout = 30 s.
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public static int ExecuteNonQuery(string connectionString, string commandText, params SqlParameter[] parameters)
+        {
+            return ExecuteNonQuery(connectionString, commandText, CommandType.Text, 30, parameters);
+        }
+
+        #endregion
+
+        #region EXECUTE SCALAR
+
+        /// <summary>
         /// Executes the query, and returns the first column of the first row in the result set returned by the query.
         /// Additional rows or columns are ignored.
         /// </summary>
-        /// <param name="connectionString">The connection string to the SQLServer/database.</param>
-        /// <param name="commandText">The SQL command to be executed.</param>
-        /// <param name="commandType">Either stored procedure or text.</param>
-        /// <param name="parameters">A collection of SQLParameters to be passed to the SQL command.</param>
-        /// <returns>The first column of the first row as an object.</returns>
-        public static object ExecuteScalar(string connectionString, string commandText, CommandType commandType, params SqlParameter[] parameters)
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="commandType"></param>
+        /// <param name="commandTimeout"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public static object ExecuteScalar(string connectionString, string commandText, CommandType commandType, int commandTimeout, params SqlParameter[] parameters)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
@@ -69,6 +106,8 @@ namespace Test.Automation.Data
                 conn.InfoMessage += Conn_InfoMessage;
 
                 cmd.CommandType = commandType;
+                cmd.CommandTimeout = commandTimeout;
+
                 if (parameters[0] != null)
                 {
                     cmd.Parameters.AddRange(parameters);
@@ -88,6 +127,37 @@ namespace Test.Automation.Data
         }
 
         /// <summary>
+        /// Use when query does not use SQL parameters. Uses default(SqlParameter).
+        /// Executes the query, and returns the first column of the first row in the result set returned by the query.
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="commandType"></param>
+        /// <param name="commandTimeout"></param>
+        /// <returns></returns>
+        public static object ExecuteScalar(string connectionString, string commandText, CommandType commandType = CommandType.Text, int commandTimeout = 30)
+        {
+            return ExecuteScalar(connectionString, commandText, commandType, commandTimeout, default(SqlParameter));
+        }
+
+        /// <summary>
+        /// Executes the query, and returns the first column of the first row in the result set returned by the query.
+        /// Uses CommandType.Text and CommandTimeout = 30 s.
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public static object ExecuteScalar(string connectionString, string commandText, params SqlParameter[] parameters)
+        {
+            return ExecuteScalar(connectionString, commandText, CommandType.Text, 30, parameters);
+        }
+        
+        #endregion
+
+        #region EXECUTE READER
+
+        /// <summary>
         /// Sends the CommandText to the Connection, and builds a SqlDataReader using one of the CommandBehavior values.
         /// When the command is executed, the associated Connection object is closed when the associated DataReader object is closed.
         /// </summary>
@@ -96,14 +166,19 @@ namespace Test.Automation.Data
         /// <param name="commandType">Either stored procedure or text.</param>
         /// <param name="parameters">A collection of SQLParameters to be passed to the SQL command.</param>
         /// <returns>A SqlDataReader containing the query results.</returns>
-        public static SqlDataReader ExecuteReader(string connectionString, string commandText, CommandType commandType, params SqlParameter[] parameters)
+        public static SqlDataReader ExecuteReader(string connectionString, string commandText, CommandType commandType, int commandTimeout, params SqlParameter[] parameters)
         {
             var conn = new SqlConnection(connectionString);
 
             using (var cmd = new SqlCommand(commandText, conn))
             {
                 cmd.CommandType = commandType;
-                cmd.Parameters.AddRange(parameters);
+                cmd.CommandTimeout = commandTimeout;
+
+                if (parameters[0] != null)
+                {
+                    cmd.Parameters.AddRange(parameters);
+                }
 
                 conn.Open();
                 // When using CommandBehavior.CloseConnection, the connection will be closed when the IDataReader is closed.
@@ -114,17 +189,22 @@ namespace Test.Automation.Data
             }
         }
 
+        #endregion
+
+        #region EXECUTE DATATABLE
+
         /// <summary>
         /// Fills a DataTable with values from the internal ExecuteReader command using the supplied IDataReader.
         /// The ExecuteReader command sends the CommandText to the Connection, and builds a SqlDataReader using CommandBehavior.CloseConnection.
         /// When the command is executed, the associated Connection object is closed when the associated DataReader object is closed.
         /// </summary>
-        /// <param name="connectionString">The connection string to the SQLServer/database.</param>
-        /// <param name="commandText">The SQL command to be executed.</param>
-        /// <param name="commandType">Either stored procedure or text.</param>
-        /// <param name="parameters">A collection of SQLParameters to be passed to the SQL command.</param>
-        /// <returns>A DataTable containg the results.</returns>
-        public static DataTable ExecuteDataTable(string connectionString, string commandText, CommandType commandType,  params SqlParameter[] parameters)
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="commandType"></param>
+        /// <param name="commandTimeout"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public static DataTable ExecuteDataTable(string connectionString, string commandText, CommandType commandType, int commandTimeout, params SqlParameter[] parameters)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(commandText, conn))
@@ -132,6 +212,8 @@ namespace Test.Automation.Data
                 conn.InfoMessage += Conn_InfoMessage;
 
                 cmd.CommandType = commandType;
+                cmd.CommandTimeout = commandTimeout;
+
                 if (parameters[0] != null)
                 {
                     cmd.Parameters.AddRange(parameters);
@@ -142,6 +224,7 @@ namespace Test.Automation.Data
                 var dataTable = new DataTable("SQL RESULT TABLE");
                 // When using CommandBehavior.CloseConnection, the connection will be closed when the IDataReader is closed.
                 dataTable.Load(cmd.ExecuteReader(CommandBehavior.CloseConnection), LoadOption.OverwriteChanges, FillErrorHandler);
+
                 if (Debugger.IsAttached)
                 {
                     LogDataTableResult(conn, cmd, dataTable);
@@ -151,6 +234,35 @@ namespace Test.Automation.Data
                 return dataTable;
             }
         }
+
+        /// <summary>
+        /// Use when query does not use SQL Parameters. Uses default(SqlParameter).
+        /// Fills a DataTable with values from the internal ExecuteReader command using the supplied IDataReader.
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="commandType"></param>
+        /// <param name="commandTimeout"></param>
+        /// <returns></returns>
+        public static DataTable ExecuteDataTable(string connectionString, string commandText, CommandType commandType = CommandType.Text, int commandTimeout = 30)
+        {
+            return ExecuteDataTable(connectionString, commandText, commandType, commandTimeout, default(SqlParameter));
+        }
+
+        /// <summary>
+        /// Fills a DataTable with values from the internal ExecuteReader command using the supplied IDataReader.
+        /// Uses CommandType.Text and CommandTimeout = 30 s.
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="commandText"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public static DataTable ExecuteDataTable(string connectionString, string commandText, params SqlParameter[] parameters)
+        {
+            return ExecuteDataTable(connectionString, commandText, CommandType.Text, 30, parameters);
+        }
+
+        #endregion
 
         #region PRIVATE METHODS
 

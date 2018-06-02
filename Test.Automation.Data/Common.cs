@@ -32,7 +32,7 @@ SELECT COUNT(*)
 FROM [sys].[database_principals]
 WHERE [name] = @user_name ;
 ";
-            return (int)SqlHelper.ExecuteScalar(connectionString, sql, CommandType.Text, paramUsername);
+            return (int)SqlHelper.ExecuteScalar(connectionString, sql, paramUsername);
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ BEGIN
 	EXEC (@createUser) ;
 END
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, paramUsername);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ BEGIN
 	EXEC (@dropUser) ;
 END
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, paramUsername);
         }
 
         /// <summary>
@@ -117,7 +117,7 @@ FROM [sys].[database_role_members] AS m
 WHERE u.[name] = @user_name
 ORDER BY [Role] ;
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, paramUsername);
+            var table = SqlHelper.ExecuteDataTable(connectionString, sql, paramUsername);
             if(Debugger.IsAttached)
             {
                 PrintTable(table);
@@ -172,7 +172,7 @@ BEGIN
     PRINT 'Member added to role'
 END
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRole);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, paramUsername, paramRole);
         }
 
         /// <summary>
@@ -214,7 +214,7 @@ BEGIN
     PRINT 'Member dropped from role'
 END
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramUsername, paramRole);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, paramUsername, paramRole);
         }
 
         /// <summary>
@@ -240,7 +240,7 @@ FROM [sys].[server_role_members] AS SRM
 WHERE SP2.name = @login
 ORDER BY  SP.[name], SP2.[name] ;
 ";
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, paramLogin);
+            var table = SqlHelper.ExecuteDataTable(connectionString, sql, paramLogin);
             if(Debugger.IsAttached)
             {
                 PrintTable(table);
@@ -286,7 +286,7 @@ END
 ELSE IF IS_SRVROLEMEMBER (@server_role)), @login) IS NULL  
    print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramLogin, paramServerRole);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, paramLogin, paramServerRole);
         }
 
         /// <summary>
@@ -319,7 +319,7 @@ ELSE IF IS_SRVROLEMEMBER (@server_role, @login) = 0
 ELSE IF IS_SRVROLEMEMBER (@server_role, @login) IS NULL  
    print 'ERROR: Invalid server role / login specified: ' + @server_role + ' / ' + @login ;  
 ";
-            SqlHelper.ExecuteNonQuery(connectionString, sql, CommandType.Text, paramLogin, paramServerRole);
+            SqlHelper.ExecuteNonQuery(connectionString, sql, paramLogin, paramServerRole);
         }
 
         #endregion
@@ -343,7 +343,7 @@ SELECT COUNT(*)
 FROM [sys].[databases]
 WHERE [name] = @db_name) ; 
 ";
-            return (int)SqlHelper.ExecuteScalar(connectionString, sql, CommandType.Text, paramName);
+            return (int)SqlHelper.ExecuteScalar(connectionString, sql, paramName);
         }
 
         /// <summary>
@@ -490,10 +490,7 @@ ORDER BY [Name] ;
             Assert.Multiple(() =>
             {
                 Assert.That(actual.Count(), Is.EqualTo(expected.Count()));
-                Assert.That(actual.Except(expected), Is.Empty,
-                    "Item is missing from expected test data. " +
-                    "Run test in debug mode to generate expected data in output window.");
-                Assert.That(expected.Except(actual), Is.Empty, "Item is missing from DB.");
+                Assert.That(actual, Is.EquivalentTo(expected));
             });
         }
 
@@ -535,7 +532,7 @@ ORDER BY [Name] ;
 
         private static IEnumerable<string> GetSchemaList(string connectionString, string sql)
         {
-            var table = SqlHelper.ExecuteDataTable(connectionString, sql, CommandType.Text, default(SqlParameter));
+            var table = SqlHelper.ExecuteDataTable(connectionString, sql);
             if (Debugger.IsAttached)
             {
                 PrintTable(table, true);
@@ -546,8 +543,8 @@ ORDER BY [Name] ;
 
         private static void SqlServerVersionCheck(string serverCnn)
         {
-            var productVersion = SqlHelper.ExecuteScalar(serverCnn, "SELECT SERVERPROPERTY('ProductVersion') AS ProductVersion", CommandType.Text, default(SqlParameter)) as string;
-            // major.minor.build.revision
+            // Returns: major.minor.build.revision
+            var productVersion = SqlHelper.ExecuteScalar(serverCnn, "SELECT SERVERPROPERTY('ProductVersion') AS ProductVersion") as string;
             var major = Convert.ToInt32(productVersion.Split('.')[0]);
 
             if (major < 10)

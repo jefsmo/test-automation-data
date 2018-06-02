@@ -18,12 +18,13 @@ namespace Test.Automation.Data
         public static string WideWorldImportersCnn => GetDbConnectionString(ServerConnection, "WideWorldImporters");
 
         #region PRIVATE METHODS
-        private static string GetDbConnectionString(string serverConnection, string db_name)
+        private static string GetDbConnectionString(string serverConnection, string db_name, int connectionTimeout = 15)
         {
             var cnn = new SqlConnectionStringBuilder(serverConnection)
             {
                 InitialCatalog = db_name,
-                IntegratedSecurity = true
+                IntegratedSecurity = true,
+                ConnectionTimeout = connectionTimeout
             }.ToString();
 
             if (Regex.IsMatch(cnn, @"^([^=;]+=[^=;]+)(;[^=;]+=[^=;]+)*$"))
