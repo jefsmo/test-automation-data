@@ -545,7 +545,7 @@ ORDER BY [Name] ;
         {
             // Returns: major.minor.build.revision
             var productVersion = SqlHelper.ExecuteScalar(serverCnn, "SELECT SERVERPROPERTY('ProductVersion') AS ProductVersion") as string;
-            var major = Convert.ToInt32(productVersion.Split('.')[0]);
+            var major = Convert.ToInt32(productVersion.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries)[0]);
 
             if (major < 10)
             {

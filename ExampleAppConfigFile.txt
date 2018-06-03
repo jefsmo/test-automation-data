@@ -11,8 +11,7 @@
 
   <connectionStrings>
     <clear />
-    <add name="LOCAL" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
-    <add name="TEST" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
+    <add name="TEST.localhost" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
   </connectionStrings>
 
 </configuration>
