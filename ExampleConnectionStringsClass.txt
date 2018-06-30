@@ -8,17 +8,18 @@ namespace Test.Automation.Data
     public static class ConnectionStrings
     {
         #region APP CONFIG SETTINGS
-
         private static string TestRunSetting => ConfigurationManager.AppSettings["testRunSetting"] = "LOCAL" ? "TEST" : ConfigurationManager.AppSettings["testRunSetting"];
 
         private static string LocalHost => ConfigurationManager.ConnectionStrings[TestRunSetting + ".localhost"].ConnectionString;
-
         #endregion
+
+        #region CONNECTION STRINGS
 
         public static string WideWorldImportersCnn => GetDbConnectionString(LocalHost, "WideWorldImporters");
 
-        #region PRIVATE METHODS
+        #endregion
 
+        #region PRIVATE METHODS
         private static string GetDbConnectionString(string serverConnection, string db_name, int connectionTimeout = 15)
         {
             var cnn = new SqlConnectionStringBuilder(serverConnection)
@@ -32,12 +33,13 @@ namespace Test.Automation.Data
             {
                 return cnn;
             }
-            Console.WriteLine($"Config:Test Run Setting\t{TestRunSetting,-30}");
-            Console.WriteLine($"Config:Server Connection\t{serverConnection, -30}");
+
+            Console.WriteLine($"Config: TestRunSetting\t{TestRunSetting,-30}");
+            Console.WriteLine($"Server Connection\t{serverConnection, -30}");
             Console.WriteLine($"DB Name:\t{db_name}, -30")
+
             throw new FormatException($"Invalid SQL Connection String: {cnn}");
         }
-
         #endregion
     }
 }
