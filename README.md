@@ -1,10 +1,11 @@
 # ConnectionStrings Class
-Create a static class to generate SQL Connection strings.  
-You can use the `connectionStrings` section of the App.config file or hard code the strings in the class.
-Call the connection string using `ConnectionStrings.WideWorldImportersCnn`
+- Create a static class to generate SQL Connection strings.  
+- Use the **`connectionStrings`** section of the App.config file 
+- Call the connection string using **`ConnectionStrings.WideWorldImportersCnn`**
 
 ## Example ConnectionStrings.cs
-```
+
+```csharp
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -15,30 +16,36 @@ namespace Test.Automation.Data
     public static class ConnectionStrings
     {
         #region APP CONFIG SETTINGS
-        private static string TestEnvironment
-            => ConfigurationManager.AppSettings["testRunSetting"];
+        private static string TestRunSetting => ConfigurationManager.AppSettings["testRunSetting"] = "LOCAL" ? "TEST" : ConfigurationManager.AppSettings["testRunSetting"];
 
-        private static string ServerConnection
-            => ConfigurationManager.ConnectionStrings[TestEnvironment].ConnectionString;
+        private static string LocalHost => ConfigurationManager.ConnectionStrings[TestRunSetting + ".localhost"].ConnectionString;
         #endregion
 
-        public static string WideWorldImportersCnn => GetDbConnectionString(ServerConnection, "WideWorldImporters");
+        #region CONNECTION STRINGS
+
+        public static string WideWorldImportersCnn => GetDbConnectionString(LocalHost, "WideWorldImporters");
+
+        #endregion
 
         #region PRIVATE METHODS
-        private static string GetDbConnectionString(string serverConnection, string db_name)
+        private static string GetDbConnectionString(string serverConnection, string db_name, int connectionTimeout = 15)
         {
             var cnn = new SqlConnectionStringBuilder(serverConnection)
             {
                 InitialCatalog = db_name,
-                IntegratedSecurity = true
+                IntegratedSecurity = true,
+                ConnectionTimeout = connectionTimeout
             }.ToString();
 
             if (Regex.IsMatch(cnn, @"^([^=;]+=[^=;]+)(;[^=;]+=[^=;]+)*$"))
             {
                 return cnn;
             }
-            Console.WriteLine($"Config:TestEnvironment\t{TestEnvironment,-30}");
-            Console.WriteLine($"Config:SqlCnnString\t{ServerConnection}");
+
+            Console.WriteLine($"Config: TestRunSetting\t{TestRunSetting,-30}");
+            Console.WriteLine($"Server Connection\t{serverConnection, -30}");
+            Console.WriteLine($"DB Name:\t{db_name}, -30")
+
             throw new FormatException($"Invalid SQL Connection String: {cnn}");
         }
         #endregion
@@ -47,7 +54,8 @@ namespace Test.Automation.Data
 ```
 
 ## Example App.config
-```
+
+```xml
 <?xml version="1.0" encoding="utf-8" ?>
 <configuration>
 
@@ -61,8 +69,7 @@ namespace Test.Automation.Data
 
   <connectionStrings>
     <clear />
-    <add name="LOCAL" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
-    <add name="TEST" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
+    <add name="TEST.localhost" providerName="System.Data.SqlClient" connectionString="Data Source=localhost;" />
   </connectionStrings>
 
 </configuration>
