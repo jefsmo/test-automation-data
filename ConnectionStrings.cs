@@ -8,7 +8,9 @@ namespace Test.Automation.Data
     public static class ConnectionStrings
     {
         #region APP CONFIG SETTINGS
-        private static string TestRunSetting => ConfigurationManager.AppSettings["testRunSetting"] = "LOCAL" ? "TEST" : ConfigurationManager.AppSettings["testRunSetting"];
+        private static string TestRunSetting => ConfigurationManager.AppSettings["testRunSetting"] == "LOCAL"
+            ? "TEST"
+            : ConfigurationManager.AppSettings["testRunSetting"];
 
         private static string LocalHost => ConfigurationManager.ConnectionStrings[TestRunSetting + ".localhost"].ConnectionString;
         #endregion
@@ -20,13 +22,13 @@ namespace Test.Automation.Data
         #endregion
 
         #region PRIVATE METHODS
-        private static string GetDbConnectionString(string serverConnection, string db_name, int connectionTimeout = 15)
+        private static string GetDbConnectionString(string serverConnectionString, string db_name, int connectTimeout = 15)
         {
-            var cnn = new SqlConnectionStringBuilder(serverConnection)
+            var cnn = new SqlConnectionStringBuilder(serverConnectionString)
             {
                 InitialCatalog = db_name,
                 IntegratedSecurity = true,
-                ConnectionTimeout = connectionTimeout
+                ConnectTimeout = connectTimeout
             }.ToString();
 
             if (Regex.IsMatch(cnn, @"^([^=;]+=[^=;]+)(;[^=;]+=[^=;]+)*$"))
@@ -35,8 +37,8 @@ namespace Test.Automation.Data
             }
 
             Console.WriteLine($"Config: TestRunSetting\t{TestRunSetting,-30}");
-            Console.WriteLine($"Server Connection\t{serverConnection, -30}");
-            Console.WriteLine($"DB Name:\t{db_name}, -30")
+            Console.WriteLine($"Server Connection String\t{serverConnectionString,-30}");
+            Console.WriteLine($"DB Name:\t{db_name}, -30");
 
             throw new FormatException($"Invalid SQL Connection String: {cnn}");
         }
