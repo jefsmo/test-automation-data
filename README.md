@@ -21,7 +21,7 @@ In addition, there is a Common class that contains common SQL queries used for d
 This includes users, roles and schema objects.
 
 ## Example Database Test
-~~~sql
+~~~csharp
 using System;
 using System.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
