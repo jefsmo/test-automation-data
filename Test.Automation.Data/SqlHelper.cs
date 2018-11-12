@@ -4,7 +4,10 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 namespace Test.Automation.Data
 {
@@ -262,6 +265,61 @@ namespace Test.Automation.Data
             return ExecuteDataTable(connectionString, commandText, CommandType.Text, 30, parameters);
         }
 
+        /// <summary>
+        /// Fills a DataTable after executing an SQL query using Windows impersonation.
+        /// The impersonated account is passed-in via the SqlConnectionStringBuilder properties.
+        /// </summary>
+        /// <param name="builder">The SqlConnectionString builder used for the connection string</param>
+        /// <param name="commandText">The SQL command text to be executed</param>
+        /// <param name="commandType">The CommandType used to specify how the command string is interpreted</param>
+        /// <param name="timeout">The CommandTimeout value</param>
+        /// <param name="parameters">A SqlParameter array</param>
+        /// <returns>Returns a DataTable with the SQL query results</returns>
+        public static DataTable ExecuteDataTableWithImpersonation(SqlConnectionStringBuilder builder, string commandText, CommandType commandType, int timeout = 30, params SqlParameter[] parameters)
+        {
+            var result = default(DataTable);
+
+            const int LOGON32_PROVIDER_DEFAULT = 0;
+            const int LOGON32_LOGON_INTERACTIVE = 2;
+
+            var domain = Environment.UserDomainName;
+            var user = builder.UserID;
+            var password = builder.Password;
+
+            // Get a user token.
+            var returnValue = LogonUser(user, domain, password, LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, out var safeAccessTokenHandle);
+
+            if (!returnValue)
+            {
+                var ret = Marshal.GetLastWin32Error();
+                Console.WriteLine($"LogonUser failed with error code: {ret}");
+                throw new System.ComponentModel.Win32Exception(ret);
+            }
+
+            // NOTE: if you want to run unimpersonated, pass 'SafeAccessTokenHandle.InvalidHandle' instead of variable 'safeAccessTokenHandle'.
+            if (Debugger.IsAttached)
+            {
+                Console.WriteLine($"Before impersonation: {WindowsIdentity.GetCurrent().Name}");
+                WindowsIdentity.RunImpersonated(
+                    safeAccessTokenHandle,
+                    () =>
+                    {
+                        if (Debugger.IsAttached)
+                        {
+                            Console.WriteLine($"During impersonation: {WindowsIdentity.GetCurrent().Name}");
+                        }
+
+                        result = ExecuteDataTable(builder.ToString(), commandText, commandType, timeout, parameters);
+                    });
+            }
+
+            if (Debugger.IsAttached)
+            {
+                Console.WriteLine($"After impersonation: {WindowsIdentity.GetCurrent().Name}");
+            }
+            return result;
+        }
+        
         #endregion
 
         #region PRIVATE METHODS
@@ -362,6 +420,19 @@ namespace Test.Automation.Data
                 }
             }
         }
+
+        /// <summary>
+        /// Windows method to logon to Windows using impersonated credentials.
+        /// </summary>
+        /// <param name="lpszUsername">The impersonated user</param>
+        /// <param name="lpszDomain">The domain of the impersonated user</param>
+        /// <param name="lpszPassword">The impersonated user password</param>
+        /// <param name="dwLogonType">The logon type</param>
+        /// <param name="dwLogonProvider">The logon provider</param>
+        /// <param name="phToken">The user token for the impersonated user</param>
+        /// <returns>Returns a user token</returns>
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool LogonUser(string lpszUsername, string lpszDomain, string lpszPassword, int dwLogonType, int dwLogonProvider, out SafeAccessTokenHandle phToken);
 
         #endregion
     }

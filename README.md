@@ -152,6 +152,17 @@ namespace Test.Automation.Data
 </configuration>
 ```
 
+### Schema.ini
+~~~text
+When the Text driver is used, the format of the text file is determined by using a schema information file.
+The schema information file is always named Schema.ini and always kept in the same directory as the text data source.
+
+A Schema.ini file is always required for accessing fixed-length data.
+You should use a Schema.ini file when your text table contains DateTime, Currency, or Decimal data,
+or any time that you want more control over the handling of the data in the table.
+~~~
+
+
 ## Creating Packages Locally
 ### OctoPack Command Line Reference
 #### Create a Local NuGet Package with OctoPack
@@ -178,3 +189,5 @@ MSBUILD Test.Automation.Data.csproj /t:Rebuild /p:Configuration=Release /p:RunOc
 |`/p:RunOctoPack=`|`true`|Creates packages with Octopack using the .nuspec file layout.|
 |`/p:OctoPackPackageVersion=`|`1.0.0`|Updates Package Version.|
 |`/p:OctoPackPublishPackageToFileShare=`|`C:\Packages`|Copies packages to local file location.|
+
+eof

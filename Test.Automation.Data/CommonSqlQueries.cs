@@ -9,9 +9,9 @@ using NUnit.Framework;
 namespace Test.Automation.Data
 {
     /// <summary>
-    /// Represents common methods used for database BVT testing.
+    /// Represents common methods used for querying database schema objects.
     /// </summary>
-    public static class Common
+    public static class CommonSqlQueries
     {
         #region USER ROLES AND PERMISSIONS CHECKS
 
@@ -120,7 +120,7 @@ ORDER BY [Role] ;
             var table = SqlHelper.ExecuteDataTable(connectionString, sql, paramUsername);
             if(Debugger.IsAttached)
             {
-                PrintTable(table);
+                table.PrintDataTable();
             }
             if(table.Rows.Count > 0)
             {
@@ -243,7 +243,7 @@ ORDER BY  SP.[name], SP2.[name] ;
             var table = SqlHelper.ExecuteDataTable(connectionString, sql, paramLogin);
             if(Debugger.IsAttached)
             {
-                PrintTable(table);
+                table.PrintDataTable();
             }
             if(table.Rows.Count > 0)
             {
@@ -494,48 +494,41 @@ ORDER BY [Name] ;
             });
         }
 
-        /// <summary>
-        /// Prints the SQL result as a table, optionally using quotes.
-        /// Copy/paste the quoted result into your expected data values.
-        /// </summary>
-        /// <param name="table"></param>
-        /// <param name="isWithQuotes"></param>
-        public static void PrintTable(DataTable table, bool isWithQuotes = false)
-        {
-            Console.WriteLine(table.TableName.ToUpperInvariant());
-
-            foreach(DataColumn col in table.Columns)
-            {
-                Console.WriteLine($"{col.ColumnName, -25}");
-            }
-
-            foreach(DataRow row in table.Rows)
-            {
-                foreach(DataColumn col in table.Columns)
-                {
-                    if (isWithQuotes)
-                    {
-                        Console.WriteLine($"\"{row[col]}\",");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"{row[col],-25}");
-                    }
-                }
-            }
-            Console.WriteLine();
-        }
 
         #endregion
 
         #region PRIVATE METHODS
 
+        /// <summary>
+        /// Prints the SQL result as a table using quotes.
+        /// Copy/paste the quoted result into your expected data values.
+        /// </summary>
+        /// <param name="table"></param>
+        private static void PrintQuotedSqlResult(DataTable table)
+        {
+            Console.WriteLine($"\nSQL Result: {table.TableName}");
+
+            foreach (DataColumn col in table.Columns)
+            {
+                Console.WriteLine($"{col.ColumnName}");
+            }
+
+            foreach (DataRow row in table.Rows)
+            {
+                foreach (DataColumn col in table.Columns)
+                {
+                        Console.Write($"\"{row[col]}\",");
+                }
+            }
+            Console.WriteLine();
+        }
+        
         private static IEnumerable<string> GetSchemaList(string connectionString, string sql)
         {
             var table = SqlHelper.ExecuteDataTable(connectionString, sql);
             if (Debugger.IsAttached)
             {
-                PrintTable(table, true);
+                PrintQuotedSqlResult(table);
             }
             var colIdx = table.Columns["Name"].Ordinal;
             return table.Rows.Cast<DataRow>().Select(dr => (string)dr[colIdx]);

@@ -20,11 +20,11 @@
     <frameworkAssemblies>
       <frameworkAssembly assemblyName="System.Data" targetFramework="net461" />
     </frameworkAssemblies>
-    <dependencies>
+    <!--<dependencies>
       <group targetFramework="net461">
         <dependency id="NewtonSoft.Json" version="9.0.1" />
       </group>
-    </dependencies>
+    </dependencies>-->
   </metadata>
   <files>
     <file src="bin\Release\Test.Automation.Data.xml" target="lib\net461\" />

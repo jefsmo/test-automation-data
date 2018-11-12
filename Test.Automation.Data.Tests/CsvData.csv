@@ -1,0 +1,4 @@
+id,mytext,myinteger,mydouble,mydecimal,computed
+0,My string,42,300.5,300.5,90300.25
+1,New string,33,0.00,0.00,0.00
+2,Row Ignored,23,1.0,1.0,1.0
