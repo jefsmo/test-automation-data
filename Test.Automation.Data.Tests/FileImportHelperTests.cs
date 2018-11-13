@@ -13,11 +13,11 @@ namespace Test.Automation.Data.Tests
             var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "CsvData.csv");
             var file = new FileInfo(path);
 
-            var expected = Common.CreateDataTable("Expected");
+            var expected = Common.CreateDataTable("Expected", new[] { 0 });
             Common.AddDataRow(expected, "My string", 42, 300.5d, 300.5m);
             Common.AddDataRow(expected, "New string", 33, 0.00d, 0.00m);
 
-            var actual = ImportFileHelper.ExecuteDataTableFromTextFile(query, file);
+            var actual = ImportFileHelper.ExecuteDataTableFromTextFile(query, file, expected.PrimaryKey);
 
             var diffs = DataTableHelper.CompareDataTables(expected, actual);
             diffs.PrintDataTable();
@@ -31,12 +31,12 @@ namespace Test.Automation.Data.Tests
             var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "TextDataTabDelimited.txt");
             var file = new FileInfo(path);
 
-            var expected = Common.CreateDataTable("Expected");
+            var expected = Common.CreateDataTable("Expected", new[] { 0 });
             Common.AddDataRow(expected, "My string", 42, 300.5d, 300.5m);
             Common.AddDataRow(expected, "New string", 33, 0.00d, 0.00m);
             expected.PrintDataTable();
 
-            var actual = ImportFileHelper.ExecuteDataTableFromTextFile(query, file);
+            var actual = ImportFileHelper.ExecuteDataTableFromTextFile(query, file, expected.PrimaryKey);
             actual.PrintDataTable();
 
             var diffs = DataTableHelper.CompareDataTables(expected, actual);
@@ -51,12 +51,12 @@ namespace Test.Automation.Data.Tests
             var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "TextDataPipeDelimited.txt");
             var file = new FileInfo(path);
 
-            var expected = Common.CreateDataTable("Expected");
+            var expected = Common.CreateDataTable("Expected", new[] { 0 });
             Common.AddDataRow(expected, "My string", 42, 300.5d, 300.5m);
             Common.AddDataRow(expected, "New string", 33, 0.00d, 0.00m);
             expected.PrintDataTable();
 
-            var actual = ImportFileHelper.ExecuteDataTableFromTextFile(query, file);
+            var actual = ImportFileHelper.ExecuteDataTableFromTextFile(query, file, expected.PrimaryKey);
             actual.PrintDataTable();
 
             var diffs = DataTableHelper.CompareDataTables(expected, actual);

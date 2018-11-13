@@ -16,16 +16,15 @@ namespace Test.Automation.Data
         /// <param name="schema"></param>
         public static void BulkCopyFromDataTable(string connectionString, DataTable datatable, string destinationTable, string schema = "dbo")
         {
-            using (var cnn = new SqlConnection(connectionString))
-            using (var bulkCopy = new SqlBulkCopy(cnn))
+            using (var bulkCopy = new SqlBulkCopy(connectionString, SqlBulkCopyOptions.KeepIdentity))
             {
-                cnn.Open();
                 bulkCopy.DestinationTableName = $"[{schema}].[{destinationTable}]";
                 bulkCopy.WriteToServer(datatable);
 
                 if (Debugger.IsAttached)
                 {
-                    Console.WriteLine($"BULK COPY of DATATABLE: '{datatable.TableName}' to  SQL TABLE: [{schema}].[{destinationTable}] Completed.");
+                    Console.WriteLine($"BULK COPY of DATATABLE: '{datatable.TableName}' " +
+                        $"to  SQL TABLE: [{schema}].[{destinationTable}] Completed.");
                 }
             }
         }
@@ -41,10 +40,9 @@ namespace Test.Automation.Data
             if (expected.Rows.Count != actual.Rows.Count)
             {
                 Console.WriteLine($"\nWARNING: Row counts do not match.\r\n" +
-                    $"Expected: [{expected.Rows.Count}] Actual: [{actual.Rows.Count}]\r\n" +
-                    $"Compare only matches rows that exist in both tables.");
+                    $"Expected: [{expected.Rows.Count}] Actual: [{actual.Rows.Count}]");
             }
-            var diffs = CreateDiffTableAndSchema("Diffs");
+            var diffs = CreateTableAndSchema("Diffs");
 
             for (var row = 0; row < expected.Rows.Count; row++)
             {
@@ -59,31 +57,35 @@ namespace Test.Automation.Data
                         {
                             if (!actual.Rows[row].ItemArray[col].Equals(expected.Rows[row].ItemArray[col]))
                             {
-                                AddDiffRow(expected, actual, diffs, row, col, expectedType, actualType);
+                                AddDiffRow(expected, actual, diffs, row, col);
                             }
                         }
                         else if (expectedType.Equals(typeof(double)) && actualType.Equals(typeof(decimal)))
                         {
                             if (!decimal.ToDouble((decimal)actual.Rows[row].ItemArray[col]).Equals(expected.Rows[row].ItemArray[col]))
                             {
-                                AddDiffRow(expected, actual, diffs, row, col, expectedType, actualType);
+                                AddDiffRow(expected, actual, diffs, row, col);
                             }
                         }
                         else if (actualType.Equals(typeof(double)) && expectedType.Equals(typeof(decimal)))
                         {
                             if (!decimal.ToDouble((decimal)expected.Rows[row].ItemArray[col]).Equals(actual.Rows[row].ItemArray[col]))
                             {
-                                AddDiffRow(expected, actual, diffs, row, col, expectedType, actualType);
+                                AddDiffRow(expected, actual, diffs, row, col);
                             }
                         }
                         else
                         {
                             if (!actual.Rows[row].ItemArray[col].ToString().Equals(expected.Rows[row].ItemArray[col].ToString()))
                             {
-                                AddDiffRow(expected, actual, diffs, row, col, expectedType, actualType);
+                                AddDiffRow(expected, actual, diffs, row, col);
                             }
                         }
                     }
+                }
+                else
+                {
+                    Console.WriteLine($"Expected row '{row}' not found in actual data. {string.Join(", ", expected.Rows[row].ItemArray)}");
                 }
             }
             return diffs;
@@ -125,7 +127,7 @@ namespace Test.Automation.Data
             }
         }
 
-        private static void AddDiffRow(DataTable expected, DataTable actual, DataTable diffs, int row, int col, Type expectedType, Type actualType)
+        private static void AddDiffRow(DataTable expected, DataTable actual, DataTable diffs, int row, int col)
         {
             var newRow = diffs.NewRow();
 
@@ -133,30 +135,38 @@ namespace Test.Automation.Data
             newRow["Column"] = expected.Columns[col].ColumnName;
             newRow["Expected"] = expected.Rows[row].ItemArray[col].ToString();
             newRow["Actual"] = actual.Rows[row].ItemArray[col].ToString();
-            newRow["ExpectedType"] = expectedType;
-            newRow["ActualType"] = actualType;
+            newRow["ExpectedType"] = expected.Rows[row].ItemArray[col].GetType();
+            newRow["ActualType"] = actual.Rows[row].ItemArray[col].GetType();
 
             diffs.Rows.Add(newRow);
         }
 
-        private static DataTable CreateDiffTableAndSchema(string name)
+        private static DataTable CreateTableAndSchema(string name)
         {
             var dt = new DataTable(name);
 
-            DataColumn col;
-
             DataColumn[] cols =
             {
-                col = new DataColumn("Row"),
-                col = new DataColumn("Column"),
-                col = new DataColumn("Expected"),
-                col = new DataColumn("Actual"),
-                col = new DataColumn("ExpectedType"),
-                col = new DataColumn("ActualType")
+                new DataColumn
+                {
+                    ColumnName =  "id",
+                    DataType = Type.GetType("System.Int32"),
+                    AutoIncrement = true,
+                    AutoIncrementSeed = 0,
+                    AutoIncrementStep = 1,
+                    ReadOnly = true
+                },
+                new DataColumn("Row"),
+                new DataColumn("Column"),
+                new DataColumn("Expected"),
+                new DataColumn("Actual"),
+                new DataColumn("ExpectedType"),
+                new DataColumn("ActualType")
             };
 
             dt.Columns.AddRange(cols);
-            dt.PrimaryKey = new[] { dt.Columns["Row"] };
+            dt.PrimaryKey = new DataColumn[] { dt.Columns["id"] };
+
             return dt;
         }
     }

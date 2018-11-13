@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
+using System.Linq;
 using System.IO;
 
 namespace Test.Automation.Data
@@ -9,94 +10,100 @@ namespace Test.Automation.Data
     /// <summary>
     /// Represents methods for importing data from files (Excel, CSV, TXT).
     /// REQUIRED: Install Microsoft Access Database Engine 2016 Redistributable.
+    /// This is the source of the Microsoft.ACE.OLEDB.16.0 provider.
     /// </summary>
     public static class ImportFileHelper
     {
+        public static DataTable ExecuteDataTableFromExcel(string selectCommandText, FileInfo excelFile, DataColumn[] primaryKeyColumns)
+        {
+            var keyColumns = primaryKeyColumns.Select(x => x.Ordinal).ToArray();
+            return ExecuteDataTableFromExcel(selectCommandText, excelFile, keyColumns);
+        }
+
         /// <summary>
         /// Fills a DataTable with data imported from an Excel file.
         /// Example query: SELECT * FROM [Sheet2$]
         /// </summary>
-        /// <param name="query">The Excel query used to return data</param>
+        /// <param name="selectCommandText">The Excel query used to return data</param>
         /// <param name="excelFile">A FileInfo object for the Excel file</param>
-        /// <param name="timeout">The CommandTimeout value</param>
+        /// <param name="primaryKeyColumns">An array of the column numbers that make up the primary key</param>
         /// <returns></returns>
-        public static DataTable ExecuteDataTableFromExcel(string query, FileInfo excelFile, int timeout = 30)
+        public static DataTable ExecuteDataTableFromExcel(string selectCommandText, FileInfo excelFile, int[] primaryKeyColumns)
         {
             var builder = new OleDbConnectionStringBuilder
             {
+                // For Excel files: the full path of the file.
                 DataSource = excelFile.FullName,
-                Provider = "Microsoft.ACE.OLEDB.12.0"
+                Provider = "Microsoft.ACE.OLEDB.16.0"
             };
             builder.Add("Extended Properties", $"Excel 12.0 Xml;HDR=YES;IMEX={IMEX.MajorityTypes};");
 
-            var datatable = new DataTable(excelFile.Name.Replace(excelFile.Extension, ""));
+            var dt = new DataTable(excelFile.Name.Replace(excelFile.Extension, ""));
 
-            using (var cnn = new OleDbConnection
+            using (var da = new OleDbDataAdapter(selectCommandText, builder.ConnectionString))
             {
-                ConnectionString = builder.ConnectionString
-            })
-            using (var cmd = new OleDbCommand()
-            {
-                Connection = cnn,
-                CommandText = query,
-                CommandTimeout = timeout,
-                CommandType = CommandType.Text
-            })
-            using (var da = new OleDbDataAdapter(cmd))
-            {
-                cnn.Open();
-                var rows = da.Fill(datatable);
+                var rows = da.Fill(dt);
+
+                var primaryKey = new DataColumn[primaryKeyColumns.Length];
+                for (var i = 0; i < primaryKeyColumns.Length; i++)
+                {
+                    primaryKey[i] = dt.Columns[i];
+                }
+                dt.PrimaryKey = primaryKey;
+
 
                 if (Debugger.IsAttached)
                 {
                     Console.WriteLine($"Connection String: {builder.ConnectionString}");
-                    Console.WriteLine($"EXCEL IMPORT '{query.Substring(query.IndexOf("FROM")).Trim()}' to DATATABLE '{excelFile.Name.Replace(excelFile.Extension, "")}': {rows} rows.");
+                    Console.WriteLine($"EXCEL IMPORT '{selectCommandText.Substring(selectCommandText.IndexOf("FROM")).Trim()}' " +
+                        $"to DATATABLE '{excelFile.Name.Replace(excelFile.Extension, "")}': {rows} rows.");
                 }
             }
-            return datatable;
+            return dt;
         }
 
+        public static DataTable ExecuteDataTableFromTextFile(string selectCommandText, FileInfo textFile, DataColumn[] primaryKeyColumns)
+        {
+            var keyColumns = primaryKeyColumns.Select(x => x.Ordinal).ToArray();
+            return ExecuteDataTableFromTextFile(selectCommandText, textFile, keyColumns);
+        }
+        
         /// <summary>
         /// Fills a DataTable with data imported from a text file.
         /// Example query: SELECT * FROM [textfile#csv]
         /// </summary>
-        /// <param name="query">The text file query used to return data</param>
+        /// <param name="selectCommandText">The text file query used to return data</param>
         /// <param name="textFile">A FileInfo object for the text file</param>
-        /// <param name="timeout">The CommandTimeout value</param>
+        /// <param name="primaryKeyColumns">An array of the column numbers that make up the primary key</param>
         /// <returns></returns>
-        public static DataTable ExecuteDataTableFromTextFile(string query, FileInfo textFile, int timeout = 30)
+        public static DataTable ExecuteDataTableFromTextFile(string selectCommandText, FileInfo textFile, int[] primaryKeyColumns)
         {
             var builder = new OleDbConnectionStringBuilder
             {
-                // Must be the path without the file name.
+                // For text files: must be the path without the file name.
                 DataSource = textFile.DirectoryName,
-                Provider = "Microsoft.ACE.OLEDB.12.0"
+                Provider = "Microsoft.ACE.OLEDB.16.0"
             };
-            builder.Add("Extended Properties", $"text;");
+            builder.Add("Extended Properties", $"Text;");
 
             var dt = new DataTable(textFile.Name.Replace(textFile.Extension, ""));
 
-            using (var cnn = new OleDbConnection
+            using (var da = new OleDbDataAdapter(selectCommandText, builder.ConnectionString))
             {
-                ConnectionString = builder.ConnectionString
-            })
-            using (var cmd = new OleDbCommand()
-            {
-                Connection = cnn,
-                CommandText = query,
-                CommandTimeout = timeout,
-                CommandType = CommandType.Text
-            })
-            using (var da = new OleDbDataAdapter(cmd))
-            {
-                cnn.Open();
                 var rows = da.Fill(dt);
-                dt.PrimaryKey = new[] { dt.Columns[0] };
+
+                var primaryKey = new DataColumn[primaryKeyColumns.Length];
+                for (var i = 0; i < primaryKeyColumns.Length; i++)
+                {
+                    primaryKey[i] = dt.Columns[i];
+                }
+                dt.PrimaryKey = primaryKey;
 
                 if (Debugger.IsAttached)
                 {
                     Console.WriteLine($"Connection String: {builder.ConnectionString}");
-                    Console.WriteLine($"TEXT FILE IMPORT '{query.Substring(query.IndexOf("FROM")).Trim()}' to DATATABLE '{textFile.Name.Replace(textFile.Extension, "")}': {rows} rows.");
+                    Console.WriteLine($"TEXT FILE IMPORT '{selectCommandText.Substring(selectCommandText.IndexOf("FROM")).Trim()}' " +
+                        $"to DATATABLE '{textFile.Name.Replace(textFile.Extension, "")}': {rows} rows.");
                 }
             }
             return dt;
@@ -104,7 +111,7 @@ namespace Test.Automation.Data
 
         #region EXTENDED PROPERTIES
         /// <summary>
-        /// Excel only; IMport EXport (IMEX) mode.
+        /// Excel Extended Properties only. IMport EXport (IMEX) mode.
         /// </summary>
         private enum IMEX
         {
@@ -117,19 +124,6 @@ namespace Test.Automation.Data
             /// (Default) Columns of mixed data will be cast to Text on import.
             /// </summary>
             Text = 1
-        }
-
-        /// <summary>
-        /// Text file FMT=[value];
-        /// For Delimited(*): You can substitute any character for the * except for the double quotation mark (").
-        /// </summary>
-        private class FMT
-        {
-            public static string TabDelimited => "TabDelimited";
-            public static string CommaDelimited => "CSVDelimited";
-            public static string Delimited_Pipe => "Delimited(|)";
-            public static string Delimited_SemiColon => "Delimited(;)";
-            public static string FixedLength => "FixedLength";
         }
         #endregion
     }

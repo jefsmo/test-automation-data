@@ -162,6 +162,13 @@ You should use a Schema.ini file when your text table contains DateTime, Currenc
 or any time that you want more control over the handling of the data in the table.
 ~~~
 
+|Format Specifier|Table Format|
+|---|---|
+|TabDelimited|Fields in the file delimited by tabs.|
+|CSVDelimited|Fields in the file delimited by commas.|
+|Delimited(*)|Fields in the file delimited by * or other char.|
+|FixedLength|Fields in the file are of fixed length.|
+
 
 ## Creating Packages Locally
 ### OctoPack Command Line Reference

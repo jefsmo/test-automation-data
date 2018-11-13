@@ -10,10 +10,11 @@ namespace Test.Automation.Data.Tests
         [Test]
         public void CompareDataTables_ReturnsDiffs_WhenTablesAreDifferent()
         {
-            var expected = Common.CreateDataTable("Expected");
+            var expected = Common.CreateDataTable("Expected", new[] { 0 });
             Common.AddDataRow(expected, "my string", 42, 2d, 2.00m);
             expected.PrintDataTable();
-            var actual = Common.CreateDataTable("Actual");
+
+            var actual = Common.CreateDataTable("Actual", expected.PrimaryKey);
             Common.AddDataRow(actual, "not my string", 99, 3d, 3.00m);
             actual.PrintDataTable();
 
@@ -25,9 +26,9 @@ namespace Test.Automation.Data.Tests
         [Test]
         public void CompareDataTables_ReturnsEmpty_WhenNoDiffs()
         {
-            var expected = Common.CreateDataTable("Expected");
+            var expected = Common.CreateDataTable("Expected", new[] { 0 });
             Common.AddDataRow(expected, "my string", 42, 2d, 2.00m);
-            var actual = Common.CreateDataTable("Actual");
+            var actual = Common.CreateDataTable("Actual", expected.PrimaryKey);
             Common.AddDataRow(actual, "my string", 42, 2d, 2.00m);
 
             var diffs = DataTableHelper.CompareDataTables(expected, actual);
