@@ -14,7 +14,8 @@ namespace Test.Automation.Data.Tests
             var keys = primaryKeyColumns.Select(x => x.Ordinal).ToArray();
             return CreateDataTable(name, keys);
         }
-            public static DataTable CreateDataTable(string name, int[] primaryKeyColumns)
+
+        public static DataTable CreateDataTable(string name, int[] primaryKeyColumns)
         {
             var dt = new DataTable(name);
 
@@ -41,7 +42,7 @@ namespace Test.Automation.Data.Tests
             var primaryKey = new DataColumn[primaryKeyColumns.Length];
             for (var i = 0; i < primaryKeyColumns.Length; i++)
             {
-                primaryKey[i] = dt.Columns[i];
+                primaryKey[i] = dt.Columns[primaryKeyColumns[i]];
             }
             dt.PrimaryKey = primaryKey;
 

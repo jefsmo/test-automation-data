@@ -36,7 +36,7 @@ namespace Test.Automation.Data
                 DataSource = excelFile.FullName,
                 Provider = "Microsoft.ACE.OLEDB.16.0"
             };
-            builder.Add("Extended Properties", $"Excel 12.0 Xml;HDR=YES;IMEX={IMEX.MajorityTypes};");
+            builder.Add("Extended Properties", $"Excel 12.0 Xml;HDR=YES;IMEX={(int)IMEX.Text};");
 
             var dt = new DataTable(excelFile.Name.Replace(excelFile.Extension, ""));
 
@@ -47,11 +47,10 @@ namespace Test.Automation.Data
                 var primaryKey = new DataColumn[primaryKeyColumns.Length];
                 for (var i = 0; i < primaryKeyColumns.Length; i++)
                 {
-                    primaryKey[i] = dt.Columns[i];
+                    primaryKey[i] = dt.Columns[primaryKeyColumns[i]];
                 }
                 dt.PrimaryKey = primaryKey;
-
-
+                
                 if (Debugger.IsAttached)
                 {
                     Console.WriteLine($"Connection String: {builder.ConnectionString}");
@@ -95,7 +94,7 @@ namespace Test.Automation.Data
                 var primaryKey = new DataColumn[primaryKeyColumns.Length];
                 for (var i = 0; i < primaryKeyColumns.Length; i++)
                 {
-                    primaryKey[i] = dt.Columns[i];
+                    primaryKey[i] = dt.Columns[primaryKeyColumns[i]];
                 }
                 dt.PrimaryKey = primaryKey;
 
@@ -111,7 +110,7 @@ namespace Test.Automation.Data
 
         #region EXTENDED PROPERTIES
         /// <summary>
-        /// Excel Extended Properties only. IMport EXport (IMEX) mode.
+        /// Excel Extended Property. IMEX (IMport EXport) mode to use when importing from Excel.
         /// </summary>
         private enum IMEX
         {

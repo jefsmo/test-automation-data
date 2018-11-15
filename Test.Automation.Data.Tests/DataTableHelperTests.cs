@@ -10,30 +10,53 @@ namespace Test.Automation.Data.Tests
         [Test]
         public void CompareDataTables_ReturnsDiffs_WhenTablesAreDifferent()
         {
-            var expected = Common.CreateDataTable("Expected", new[] { 0 });
-            Common.AddDataRow(expected, "my string", 42, 2d, 2.00m);
-            expected.PrintDataTable();
+            var expected = Common.CreateDataTable("Expected", new[] { 0, 2 });
+            Common.AddDataRow(expected, "Text one.", 42, 2.00, 2.00m);
+            Common.AddDataRow(expected, "Text two.", 42, 3.00, 3.00m);
+            Common.AddDataRow(expected, "Text three.", 43, 4.00, 4.00m);
+            Common.AddDataRow(expected, "Text four.", 43, 5.00, 5.00m);
 
             var actual = Common.CreateDataTable("Actual", expected.PrimaryKey);
-            Common.AddDataRow(actual, "not my string", 99, 3d, 3.00m);
-            actual.PrintDataTable();
+            Common.AddDataRow(actual, "Text one.", 42, 2.00, 2.00m);
+            Common.AddDataRow(actual, "Text four.", 42, 5.00, 5.00m);
+            Common.AddDataRow(actual, "Text three.", 43, 4.00, 4.00m);
 
             var diffs = DataTableHelper.CompareDataTables(expected, actual);
-            diffs.PrintDataTable();
-            Assert.That(diffs.Rows.Count, Is.EqualTo(5));
+            Assert.That(diffs.Rows.Count, Is.EqualTo(10));
         }
 
         [Test]
-        public void CompareDataTables_ReturnsEmpty_WhenNoDiffs()
+        public void CompareDataTables_ReturnsNull_WhenTablesIdentical()
         {
-            var expected = Common.CreateDataTable("Expected", new[] { 0 });
-            Common.AddDataRow(expected, "my string", 42, 2d, 2.00m);
+            var expected = Common.CreateDataTable("Expected", new[] { 0, 2 });
+            Common.AddDataRow(expected, "Text one.", 42, 2.00, 2.00m);
+            Common.AddDataRow(expected, "Text two.", 42, 3.00, 3.00m);
+            Common.AddDataRow(expected, "Text three.", 43, 4.00, 4.00m);
+
             var actual = Common.CreateDataTable("Actual", expected.PrimaryKey);
-            Common.AddDataRow(actual, "my string", 42, 2d, 2.00m);
+            Common.AddDataRow(actual, "Text one.", 42, 2.00, 2.00m);
+            Common.AddDataRow(actual, "Text two.", 42, 3.00, 3.00m);
+            Common.AddDataRow(actual, "Text three.", 43, 4.00, 4.00m);
 
             var diffs = DataTableHelper.CompareDataTables(expected, actual);
-            diffs.PrintDataTable();
-            Assert.That(diffs.Rows.Count, Is.EqualTo(0));
+            Assert.That(diffs, Is.Null);
+        }
+
+        [Test]
+        public void CompareDataTables_ThrowsExcepton_WhenActualHasMoreRows()
+        {
+            var expected = Common.CreateDataTable("Expected", new[] { 0, 2 });
+            Common.AddDataRow(expected, "Text one.", 42, 2.00, 2.00m);
+            Common.AddDataRow(expected, "Text two.", 42, 3.00, 3.00m);
+            Common.AddDataRow(expected, "Text three.", 43, 4.00, 4.00m);
+
+            var actual = Common.CreateDataTable("Actual", expected.PrimaryKey);
+            Common.AddDataRow(actual, "Text one.", 42, 2.00, 2.00m);
+            Common.AddDataRow(actual, "Text two.", 42, 3.00, 3.00m);
+            Common.AddDataRow(actual, "Text three.", 43, 4.00, 4.00m);
+            Common.AddDataRow(actual, "Text four.", 43, 5.00, 5.00m);
+
+            var ex = Assert.Throws<ArgumentException>(() => DataTableHelper.CompareDataTables(expected, actual));
         }
 
         [Test]
