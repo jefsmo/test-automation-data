@@ -224,7 +224,7 @@ namespace Test.Automation.Data
 
                 conn.Open();
 
-                var dataTable = new DataTable("SQL RESULT TABLE");
+                var dataTable = new DataTable(ImportFileHelper.GetTableNameFromSelectStatement(commandText));
                 // When using CommandBehavior.CloseConnection, the connection will be closed when the IDataReader is closed.
                 dataTable.Load(cmd.ExecuteReader(CommandBehavior.CloseConnection), LoadOption.OverwriteChanges, FillErrorHandler);
 
@@ -309,7 +309,7 @@ namespace Test.Automation.Data
                             Console.WriteLine($"During impersonation: {WindowsIdentity.GetCurrent().Name}");
                         }
 
-                        result = ExecuteDataTable(builder.ToString(), commandText, commandType, timeout, parameters);
+                        result = ExecuteDataTable(builder.ConnectionString, commandText, commandType, timeout, parameters);
                     });
             }
 
@@ -319,7 +319,7 @@ namespace Test.Automation.Data
             }
             return result;
         }
-        
+
         #endregion
 
         #region PRIVATE METHODS
@@ -354,7 +354,7 @@ namespace Test.Automation.Data
         {
             var logInfo = new Dictionary<string, string>
             {
-                {"ConnectionString", conn.ConnectionString },
+                {"\nSQL Connection String", conn.ConnectionString },
                 {"SQL Query", cmd.CommandText},
                 {"SQL Result", result}
             };
@@ -432,7 +432,12 @@ namespace Test.Automation.Data
         /// <param name="phToken">The user token for the impersonated user</param>
         /// <returns>Returns a user token</returns>
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool LogonUser(string lpszUsername, string lpszDomain, string lpszPassword, int dwLogonType, int dwLogonProvider, out SafeAccessTokenHandle phToken);
+        private static extern bool LogonUser(string lpszUsername,
+            string lpszDomain,
+            string lpszPassword,
+            int dwLogonType,
+            int dwLogonProvider,
+            out SafeAccessTokenHandle phToken);
 
         #endregion
     }

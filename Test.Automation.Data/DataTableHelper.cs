@@ -15,18 +15,30 @@ namespace Test.Automation.Data
         /// <param name="datatable"></param>
         /// <param name="destinationTable"></param>
         /// <param name="schema"></param>
-        public static void BulkCopyFromDataTable(string connectionString, DataTable datatable, string destinationTable, string schema = "dbo")
+        public static int BulkCopyFromDataTable(string connectionString, DataTable datatable, string destinationTable, string schema = "dbo")
         {
             using (var bulkCopy = new SqlBulkCopy(connectionString, SqlBulkCopyOptions.Default))
             {
+                var countStart = 0;
+                var countEnd = 0;
+
+                if (Debugger.IsAttached)
+                {
+                    countStart = (int)SqlHelper.ExecuteScalar(connectionString, $"SELECT COUNT(*) FROM [{schema}].[{destinationTable}];");
+                }
+
                 bulkCopy.DestinationTableName = $"[{schema}].[{destinationTable}]";
                 bulkCopy.WriteToServer(datatable);
 
                 if (Debugger.IsAttached)
                 {
-                    Console.WriteLine($"BULK COPY of DATATABLE: '{datatable.TableName}' " +
-                        $"to  SQL TABLE: [{schema}].[{destinationTable}] completed.");
+                    countEnd = (int)SqlHelper.ExecuteScalar(connectionString, $"SELECT COUNT(*) FROM [{schema}].[{destinationTable}];");
+
+                    Console.WriteLine($"\nSQL Connection String: {connectionString}");
+                    Console.WriteLine($"BULK COPY of DATATABLE: {datatable.TableName} to  SQL TABLE: [{schema}].[{destinationTable}] completed.");
+                    Console.WriteLine($"BULK COPY copied {countEnd} - {countStart} = {countEnd - countStart} rows.");
                 }
+                return countEnd - countStart;
             }
         }
 
@@ -42,10 +54,13 @@ namespace Test.Automation.Data
         {
             if (Debugger.IsAttached)
             {
-                expected.PrintDataTable();
-                Console.WriteLine($"{expected.TableName} Primary Keys: {string.Join(", ", expected.PrimaryKey.Select(x => x.ColumnName).ToArray())}");
-                actual.PrintDataTable();
-                Console.WriteLine($"{actual.TableName} Primary Keys: {string.Join(", ", actual.PrimaryKey.Select(x => x.ColumnName).ToArray())}");
+                expected.PrintDataTable(5);
+                Console.WriteLine($"{expected.TableName} " +
+                    $"Primary Keys: {string.Join(", ", expected.PrimaryKey.Select(x => x.ColumnName).ToArray())}");
+
+                actual.PrintDataTable(5);
+                Console.WriteLine($"{actual.TableName} " +
+                    $"Primary Keys: {string.Join(", ", actual.PrimaryKey.Select(x => x.ColumnName).ToArray())}");
             }
 
             if (actual.Rows.Count > expected.Rows.Count)
@@ -55,7 +70,7 @@ namespace Test.Automation.Data
                     $"Expected: [{expected.Rows.Count}] Actual: [{actual.Rows.Count}]");
             }
 
-            var diffs = CreateTableAndSchema("Diffs", expected.PrimaryKey.Select(x => x.Ordinal).ToArray());
+            var diffs = CreateTableAndSchema(expected.TableName + "_vs_" + actual.TableName);
 
             for (var row = 0; row < expected.Rows.Count; row++)
             {
@@ -125,7 +140,7 @@ namespace Test.Automation.Data
         /// Prints the DataTable to the console.
         /// </summary>
         /// <param name="table">The DataTable to print</param>
-        public static void PrintDataTable(this DataTable table)
+        public static void PrintDataTable(this DataTable table, int maxRows = 0)
         {
             if (table == null)
             {
@@ -139,16 +154,26 @@ namespace Test.Automation.Data
                 return;
             }
 
-            Console.WriteLine($"\nDataTable Name: {table.TableName}");
+            if (maxRows == 0)
+            {
+                maxRows = table.Rows.Count;
+            }
+            else if (maxRows > table.Rows.Count)
+            {
+                maxRows = table.Rows.Count;
+            }
+
+            Console.WriteLine($"\nDataTable Name: {table.TableName} (Printing {maxRows} of {table.Rows.Count} rows.)");
 
             foreach (DataColumn col in table.Columns)
             {
                 Console.Write($"{col.ColumnName, -14}\t");
             }
             Console.WriteLine();
-
-            foreach (DataRow row in table.Rows)
+            
+            for (var i = 0; i < maxRows; i++)
             {
+                var row = table.Rows[i];
                 foreach (DataColumn col in table.Columns)
                 {
                     Console.Write($"{row[col], -14}\t");
@@ -156,7 +181,7 @@ namespace Test.Automation.Data
                 Console.WriteLine();
             }
         }
-
+        
         private static void AddDiffRow(DataTable expected, DataTable actual, DataTable diffs, int row, int col, object[] primaryKey)
         {
             var newRow = diffs.NewRow();
@@ -180,14 +205,14 @@ namespace Test.Automation.Data
             newRow["Row"] = row;
             newRow["Column"] = expected.Columns[col].ColumnName;
             newRow["Expected"] = expected.Rows[row].ItemArray[col].ToString();
-            newRow["Actual"] = "--";
+            newRow["Actual"] = "---";
             newRow["ExpectedType"] = expected.Rows[row].ItemArray[col].GetType().Name;
-            newRow["ActualType"] = "--";
+            newRow["ActualType"] = "---";
 
             diffs.Rows.Add(newRow);
         }
 
-        private static DataTable CreateTableAndSchema(string name, int[] primaryKeyColumns)
+        private static DataTable CreateTableAndSchema(string name)
         {
             var dt = new DataTable(name);
 
@@ -213,12 +238,7 @@ namespace Test.Automation.Data
 
             dt.Columns.AddRange(cols);
 
-            var primaryKey = new DataColumn[primaryKeyColumns.Length];
-            for (var i = 0; i < primaryKeyColumns.Length; i++)
-            {
-                primaryKey[i] = dt.Columns[primaryKeyColumns[i]];
-            }
-            dt.PrimaryKey = primaryKey;
+            dt.PrimaryKey = new[] { cols[0] };
 
             return dt;
         }

@@ -38,7 +38,7 @@ namespace Test.Automation.Data
             };
             builder.Add("Extended Properties", $"Excel 12.0 Xml;HDR=YES;IMEX={(int)IMEX.Text};");
 
-            var dt = new DataTable(excelFile.Name.Replace(excelFile.Extension, ""));
+            var dt = new DataTable(GetTableNameFromSelectStatement(selectCommandText));
 
             using (var da = new OleDbDataAdapter(selectCommandText, builder.ConnectionString))
             {
@@ -53,9 +53,8 @@ namespace Test.Automation.Data
                 
                 if (Debugger.IsAttached)
                 {
-                    Console.WriteLine($"Connection String: {builder.ConnectionString}");
-                    Console.WriteLine($"EXCEL IMPORT '{selectCommandText.Substring(selectCommandText.IndexOf("FROM")).Trim()}' " +
-                        $"to DATATABLE '{excelFile.Name.Replace(excelFile.Extension, "")}': {rows} rows.");
+                    Console.WriteLine($"\nOLE DB Connection String: {builder.ConnectionString}");
+                    Console.WriteLine($"IMPORT from EXCEL FILE {excelFile.Name} to DATATABLE {dt.TableName}: {rows} rows.");
                 }
             }
             return dt;
@@ -85,7 +84,7 @@ namespace Test.Automation.Data
             };
             builder.Add("Extended Properties", $"Text;");
 
-            var dt = new DataTable(textFile.Name.Replace(textFile.Extension, ""));
+            var dt = new DataTable(GetTableNameFromSelectStatement(selectCommandText));
 
             using (var da = new OleDbDataAdapter(selectCommandText, builder.ConnectionString))
             {
@@ -100,9 +99,8 @@ namespace Test.Automation.Data
 
                 if (Debugger.IsAttached)
                 {
-                    Console.WriteLine($"Connection String: {builder.ConnectionString}");
-                    Console.WriteLine($"TEXT FILE IMPORT '{selectCommandText.Substring(selectCommandText.IndexOf("FROM")).Trim()}' " +
-                        $"to DATATABLE '{textFile.Name.Replace(textFile.Extension, "")}': {rows} rows.");
+                    Console.WriteLine($"\nOLE DB Connection String: {builder.ConnectionString}");
+                    Console.WriteLine($"IMPORT from TEXT FILE {textFile.Name} to DATATABLE '{dt.TableName}': {rows} rows.");
                 }
             }
             return dt;
@@ -124,6 +122,28 @@ namespace Test.Automation.Data
             /// </summary>
             Text = 1
         }
+
+        /// <summary>
+        /// Extracts the table name from a select query.
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns>String</returns>
+        public static string GetTableNameFromSelectStatement(string query)
+        {
+            var name = query
+                .ToUpperInvariant()
+                .Split(new[] { " ", "\r\n", "\t" }, StringSplitOptions.RemoveEmptyEntries)
+                .SkipWhile(x => x != "FROM")
+                .Skip(1)
+                .FirstOrDefault();
+
+            if (name == null)
+            {
+                return "SQL RESULT";
+            }
+            return name;
+        }
+
         #endregion
     }
 }

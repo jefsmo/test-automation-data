@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Test.Automation.Data.Tests
@@ -71,6 +72,33 @@ namespace Test.Automation.Data.Tests
         {
             var dt = new DataTable("Foo");
             dt.PrintDataTable();
+        }
+
+        [Test]
+        public void GetTableFromQuery_ShouldReturnTableName_WhenSelectStatement()
+            {
+            const string sql = @"
+SELECT
+    id
+    ,mytext
+    ,foo
+    ,bar
+from [Database].[schema].[table] t
+WHERE
+    id = 1;
+";
+            Assert.That(ImportFileHelper.GetTableNameFromSelectStatement(sql), Is.EqualTo("[DATABASE].[SCHEMA].[TABLE]"));
+        }
+
+        [Test]
+        public void GetTableFromQuery_ShouldReturnSqlResult_WhenNotSelectStatement()
+        {
+            const string sql = @"
+DECLARE @sql nvarchar(max) = 'some dynamic sql'
+
+EXEC sp_executesql (@sql)
+";
+            Assert.That(ImportFileHelper.GetTableNameFromSelectStatement(sql), Is.EqualTo("SQL RESULT"));
         }
 
     }
