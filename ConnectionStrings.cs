@@ -29,7 +29,7 @@ namespace Test.Automation.Data
                 InitialCatalog = db_name,
                 IntegratedSecurity = true,
                 ConnectTimeout = connectTimeout
-            }.ToString();
+            }.ConnectionString;
 
             if (Regex.IsMatch(cnn, @"^([^=;]+=[^=;]+)(;[^=;]+=[^=;]+)*$"))
             {
